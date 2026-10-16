@@ -1,0 +1,1417 @@
+﻿##### LOOKUPS HTTP 200 #####
+{
+    "people":  [
+                   {
+                       "id":  7,
+                       "fullName":  "Đặng Văn Phúc"
+                   },
+                   {
+                       "id":  5,
+                       "fullName":  "Hoàng Thị Mai"
+                   },
+                   {
+                       "id":  3,
+                       "fullName":  "Lê Thị Hoa"
+                   },
+                   {
+                       "id":  1,
+                       "fullName":  "Nguyễn Minh Admin"
+                   },
+                   {
+                       "id":  8,
+                       "fullName":  "Nguyễn Văn Hùng"
+                   },
+                   {
+                       "id":  4,
+                       "fullName":  "Phạm Văn Nam"
+                   },
+                   {
+                       "id":  2,
+                       "fullName":  "Trần Văn Long"
+                   },
+                   {
+                       "id":  6,
+                       "fullName":  "Vũ Văn Trung"
+                   }
+               ],
+    "departments":  [
+                        {
+                            "id":  1,
+                            "code":  "BM01",
+                            "name":  "Ban Giám đốc"
+                        },
+                        {
+                            "id":  2,
+                            "code":  "BM02",
+                            "name":  "Ban ISO"
+                        },
+                        {
+                            "id":  3,
+                            "code":  "BM03",
+                            "name":  "Phòng Hành chính – Nhân sự"
+                        },
+                        {
+                            "id":  4,
+                            "code":  "BM04",
+                            "name":  "Phòng Kinh doanh"
+                        },
+                        {
+                            "id":  5,
+                            "code":  "BM05",
+                            "name":  "Phòng Kỹ thuật – Đảm bảo chất lượng"
+                        },
+                        {
+                            "id":  6,
+                            "code":  "BM06",
+                            "name":  "Phòng Sản xuất"
+                        }
+                    ],
+    "phases":  [
+                   {
+                       "id":  1,
+                       "code":  "P1",
+                       "name":  "Giai đoạn 1 – Chuẩn bị \u0026 Rà soát (T10–T11/2026)",
+                       "startDate":  "2026-10-01",
+                       "endDate":  "2026-11-30"
+                   },
+                   {
+                       "id":  2,
+                       "code":  "P2",
+                       "name":  "Giai đoạn 2 – Biên soạn \u0026 Phê duyệt (T12/2026 – T04/2027)",
+                       "startDate":  "2026-12-01",
+                       "endDate":  "2027-04-30"
+                   },
+                   {
+                       "id":  3,
+                       "code":  "P3",
+                       "name":  "Giai đoạn 3 – Ban hành \u0026 Đào tạo (T05 – T08/2027)",
+                       "startDate":  "2027-05-01",
+                       "endDate":  "2027-08-31"
+                   },
+                   {
+                       "id":  4,
+                       "code":  "P4",
+                       "name":  "Giai đoạn 4 – Đánh giá \u0026 Báo cáo (T09 – T12/2027)",
+                       "startDate":  "2027-09-01",
+                       "endDate":  "2027-12-31"
+                   }
+               ]
+}
+##### MASTERPLAN HTTP 200 #####
+{
+    "phases":  [
+                   {
+                       "id":  1,
+                       "code":  "P1",
+                       "name":  "Giai đoạn 1 – Chuẩn bị \u0026 Rà soát (T10–T11/2026)",
+                       "startDate":  "2026-10-01",
+                       "endDate":  "2026-11-30"
+                   },
+                   {
+                       "id":  2,
+                       "code":  "P2",
+                       "name":  "Giai đoạn 2 – Biên soạn \u0026 Phê duyệt (T12/2026 – T04/2027)",
+                       "startDate":  "2026-12-01",
+                       "endDate":  "2027-04-30"
+                   },
+                   {
+                       "id":  3,
+                       "code":  "P3",
+                       "name":  "Giai đoạn 3 – Ban hành \u0026 Đào tạo (T05 – T08/2027)",
+                       "startDate":  "2027-05-01",
+                       "endDate":  "2027-08-31"
+                   },
+                   {
+                       "id":  4,
+                       "code":  "P4",
+                       "name":  "Giai đoạn 4 – Đánh giá \u0026 Báo cáo (T09 – T12/2027)",
+                       "startDate":  "2027-09-01",
+                       "endDate":  "2027-12-31"
+                   }
+               ],
+    "tasks":  [
+                  {
+                      "id":  1,
+                      "code":  "MP-001",
+                      "name":  "Xây dựng Kế hoạch ISO năm 2027",
+                      "phaseId":  1,
+                      "ownerId":  3,
+                      "departmentId":  2,
+                      "priority":  "high",
+                      "status":  "completed",
+                      "progress":  100,
+                      "startDate":  "2026-10-01",
+                      "dueDate":  "2026-10-15",
+                      "result":  "Kế hoạch được Ban Giám đốc phê duyệt 12/10/2026",
+                      "note":  null
+                  },
+                  {
+                      "id":  2,
+                      "code":  "MP-002",
+                      "name":  "Rà soát mục tiêu và phạm vi ISO",
+                      "phaseId":  1,
+                      "ownerId":  2,
+                      "departmentId":  2,
+                      "priority":  "high",
+                      "status":  "in_progress",
+                      "progress":  60,
+                      "startDate":  "2026-10-05",
+                      "dueDate":  "2026-10-20",
+                      "result":  null,
+                      "note":  null
+                  },
+                  {
+                      "id":  3,
+                      "code":  "MP-003",
+                      "name":  "Rà soát danh mục tài liệu hiện hành",
+                      "phaseId":  1,
+                      "ownerId":  5,
+                      "departmentId":  3,
+                      "priority":  "medium",
+                      "status":  "in_progress",
+                      "progress":  40,
+                      "startDate":  "2026-10-05",
+                      "dueDate":  "2026-10-31",
+                      "result":  null,
+                      "note":  null
+                  },
+                  {
+                      "id":  4,
+                      "code":  "MP-004",
+                      "name":  "Phân công đầu mối ISO tại các Phòng",
+                      "phaseId":  1,
+                      "ownerId":  3,
+                      "departmentId":  2,
+                      "priority":  "medium",
+                      "status":  "completed",
+                      "progress":  100,
+                      "startDate":  "2026-10-01",
+                      "dueDate":  "2026-10-05",
+                      "result":  "Đã ban hành quyết định phân công đầu mối",
+                      "note":  null
+                  },
+                  {
+                      "id":  5,
+                      "code":  "MP-005",
+                      "name":  "Xác định nhu cầu đào tạo ISO",
+                      "phaseId":  1,
+                      "ownerId":  4,
+                      "departmentId":  2,
+                      "priority":  "low",
+                      "status":  "not_started",
+                      "progress":  0,
+                      "startDate":  "2026-10-01",
+                      "dueDate":  "2026-09-28",
+                      "result":  null,
+                      "note":  null
+                  },
+                  {
+                      "id":  6,
+                      "code":  "MP-006",
+                      "name":  "Biên soạn QT-KD.01 Quy trình bán hàng",
+                      "phaseId":  2,
+                      "ownerId":  5,
+                      "departmentId":  4,
+                      "priority":  "high",
+                      "status":  "delayed",
+                      "progress":  30,
+                      "startDate":  "2026-10-01",
+                      "dueDate":  "2026-09-30",
+                      "result":  null,
+                      "note":  "Chờ góp ý Phòng Kinh doanh"
+                  },
+                  {
+                      "id":  7,
+                      "code":  "MP-007",
+                      "name":  "Cập nhật Sổ tay chất lượng (QMS Manual)",
+                      "phaseId":  2,
+                      "ownerId":  3,
+                      "departmentId":  2,
+                      "priority":  "critical",
+                      "status":  "in_progress",
+                      "progress":  55,
+                      "startDate":  "2026-10-08",
+                      "dueDate":  "2026-10-25",
+                      "result":  null,
+                      "note":  null
+                  },
+                  {
+                      "id":  8,
+                      "code":  "MP-008",
+                      "name":  "Thẩm định và lấy ý kiến các Phòng",
+                      "phaseId":  2,
+                      "ownerId":  2,
+                      "departmentId":  2,
+                      "priority":  "medium",
+                      "status":  "not_started",
+                      "progress":  0,
+                      "startDate":  "2026-11-01",
+                      "dueDate":  "2026-11-15",
+                      "result":  null,
+                      "note":  null
+                  },
+                  {
+                      "id":  9,
+                      "code":  "MP-009",
+                      "name":  "Trình phê duyệt và ban hành tài liệu",
+                      "phaseId":  2,
+                      "ownerId":  2,
+                      "departmentId":  2,
+                      "priority":  "high",
+                      "status":  "not_started",
+                      "progress":  0,
+                      "startDate":  "2026-11-16",
+                      "dueDate":  "2026-12-01",
+                      "result":  null,
+                      "note":  null
+                  },
+                  {
+                      "id":  10,
+                      "code":  "MP-010",
+                      "name":  "Tổ chức đào tạo/chia sẻ ISO toàn công ty",
+                      "phaseId":  3,
+                      "ownerId":  4,
+                      "departmentId":  2,
+                      "priority":  "medium",
+                      "status":  "not_started",
+                      "progress":  0,
+                      "startDate":  "2027-05-05",
+                      "dueDate":  "2027-05-20",
+                      "result":  null,
+                      "note":  null
+                  },
+                  {
+                      "id":  11,
+                      "code":  "MP-011",
+                      "name":  "Triển khai áp dụng tại các Phòng",
+                      "phaseId":  3,
+                      "ownerId":  3,
+                      "departmentId":  2,
+                      "priority":  "medium",
+                      "status":  "not_started",
+                      "progress":  0,
+                      "startDate":  "2027-05-21",
+                      "dueDate":  "2027-06-30",
+                      "result":  null,
+                      "note":  null
+                  },
+                  {
+                      "id":  12,
+                      "code":  "MP-012",
+                      "name":  "Kiểm tra tuân thủ nội bộ",
+                      "phaseId":  4,
+                      "ownerId":  7,
+                      "departmentId":  2,
+                      "priority":  "high",
+                      "status":  "not_started",
+                      "progress":  0,
+                      "startDate":  "2027-09-01",
+                      "dueDate":  "2027-09-15",
+                      "result":  null,
+                      "note":  null
+                  },
+                  {
+                      "id":  13,
+                      "code":  "MP-013",
+                      "name":  "Đánh giá nội bộ (Internal Audit)",
+                      "phaseId":  4,
+                      "ownerId":  7,
+                      "departmentId":  2,
+                      "priority":  "critical",
+                      "status":  "not_started",
+                      "progress":  0,
+                      "startDate":  "2027-09-16",
+                      "dueDate":  "2027-10-15",
+                      "result":  null,
+                      "note":  null
+                  },
+                  {
+                      "id":  14,
+                      "code":  "MP-014",
+                      "name":  "Lập Action List khắc phục từ kết quả audit",
+                      "phaseId":  4,
+                      "ownerId":  7,
+                      "departmentId":  2,
+                      "priority":  "high",
+                      "status":  "not_started",
+                      "progress":  0,
+                      "startDate":  "2027-10-16",
+                      "dueDate":  "2027-11-01",
+                      "result":  null,
+                      "note":  null
+                  },
+                  {
+                      "id":  15,
+                      "code":  "MP-015",
+                      "name":  "Đánh giá KPI hệ thống \u0026 báo cáo Ban Lãnh đạo",
+                      "phaseId":  4,
+                      "ownerId":  2,
+                      "departmentId":  2,
+                      "priority":  "high",
+                      "status":  "not_started",
+                      "progress":  0,
+                      "startDate":  "2027-11-02",
+                      "dueDate":  "2027-12-10",
+                      "result":  null,
+                      "note":  null
+                  },
+                  {
+                      "id":  16,
+                      "code":  "MP-016",
+                      "name":  "Tổ chức buổi chia sẻ ISO với nhân viên mới",
+                      "phaseId":  1,
+                      "ownerId":  4,
+                      "departmentId":  2,
+                      "priority":  "low",
+                      "status":  "blocked",
+                      "progress":  10,
+                      "startDate":  "2026-10-06",
+                      "dueDate":  "2026-11-10",
+                      "result":  null,
+                      "note":  "Chờ Phòng HC-NS xác nhận danh sách"
+                  }
+              ]
+}
+##### DASHBOARD HTTP 200 #####
+{
+    "taskTotal":  16,
+    "taskCompleted":  2,
+    "taskInProgress":  3,
+    "taskNotStarted":  9,
+    "taskOverdue":  2,
+    "completionRate":  13,
+    "avgProgress":  25,
+    "tasksByStatus":  [
+                          {
+                              "status":  "not_started",
+                              "count":  9
+                          },
+                          {
+                              "status":  "in_progress",
+                              "count":  3
+                          },
+                          {
+                              "status":  "blocked",
+                              "count":  1
+                          },
+                          {
+                              "status":  "delayed",
+                              "count":  1
+                          },
+                          {
+                              "status":  "completed",
+                              "count":  2
+                          },
+                          {
+                              "status":  "cancelled",
+                              "count":  0
+                          }
+                      ],
+    "tasksByPhase":  [
+                         {
+                             "phaseId":  1,
+                             "name":  "Giai đoạn 1 – Chuẩn bị \u0026 Rà soát (T10–T11/2026)",
+                             "total":  6,
+                             "completed":  2,
+                             "avgProgress":  52
+                         },
+                         {
+                             "phaseId":  2,
+                             "name":  "Giai đoạn 2 – Biên soạn \u0026 Phê duyệt (T12/2026 – T04/2027)",
+                             "total":  4,
+                             "completed":  0,
+                             "avgProgress":  21
+                         },
+                         {
+                             "phaseId":  3,
+                             "name":  "Giai đoạn 3 – Ban hành \u0026 Đào tạo (T05 – T08/2027)",
+                             "total":  2,
+                             "completed":  0,
+                             "avgProgress":  0
+                         },
+                         {
+                             "phaseId":  4,
+                             "name":  "Giai đoạn 4 – Đánh giá \u0026 Báo cáo (T09 – T12/2027)",
+                             "total":  4,
+                             "completed":  0,
+                             "avgProgress":  0
+                         }
+                     ],
+    "tasksByPriority":  [
+                            {
+                                "priority":  "critical",
+                                "count":  2
+                            },
+                            {
+                                "priority":  "high",
+                                "count":  7
+                            },
+                            {
+                                "priority":  "medium",
+                                "count":  5
+                            },
+                            {
+                                "priority":  "low",
+                                "count":  2
+                            }
+                        ],
+    "docByStatus":  [
+                        {
+                            "status":  "draft",
+                            "count":  2
+                        },
+                        {
+                            "status":  "reviewing",
+                            "count":  1
+                        },
+                        {
+                            "status":  "approval_pending",
+                            "count":  2
+                        },
+                        {
+                            "status":  "approved",
+                            "count":  0
+                        },
+                        {
+                            "status":  "published",
+                            "count":  3
+                        },
+                        {
+                            "status":  "obsolete",
+                            "count":  0
+                        },
+                        {
+                            "status":  "archived",
+                            "count":  0
+                        }
+                    ],
+    "docPending":  2,
+    "actionByStatus":  [
+                           {
+                               "status":  "open",
+                               "count":  2
+                           },
+                           {
+                               "status":  "in_progress",
+                               "count":  2
+                           },
+                           {
+                               "status":  "blocked",
+                               "count":  0
+                           },
+                           {
+                               "status":  "overdue",
+                               "count":  1
+                           },
+                           {
+                               "status":  "pending_verification",
+                               "count":  0
+                           },
+                           {
+                               "status":  "verified",
+                               "count":  1
+                           },
+                           {
+                               "status":  "closed",
+                               "count":  0
+                           }
+                       ],
+    "actionOverdue":  1,
+    "overdueTasks":  [
+                         {
+                             "id":  5,
+                             "code":  "MP-005",
+                             "name":  "Xác định nhu cầu đào tạo ISO",
+                             "phaseId":  1,
+                             "ownerId":  4,
+                             "departmentId":  2,
+                             "priority":  "low",
+                             "status":  "not_started",
+                             "progress":  0,
+                             "startDate":  "2026-10-01",
+                             "dueDate":  "2026-09-28",
+                             "result":  null,
+                             "note":  null
+                         },
+                         {
+                             "id":  6,
+                             "code":  "MP-006",
+                             "name":  "Biên soạn QT-KD.01 Quy trình bán hàng",
+                             "phaseId":  2,
+                             "ownerId":  5,
+                             "departmentId":  4,
+                             "priority":  "high",
+                             "status":  "delayed",
+                             "progress":  30,
+                             "startDate":  "2026-10-01",
+                             "dueDate":  "2026-09-30",
+                             "result":  null,
+                             "note":  "Chờ góp ý Phòng Kinh doanh"
+                         }
+                     ],
+    "pendingDocs":  [
+                        {
+                            "id":  3,
+                            "code":  "QT-KD.01",
+                            "name":  "Quy trình bán hàng và ký hợp đồng",
+                            "docType":  "procedure",
+                            "departmentId":  4,
+                            "ownerId":  5,
+                            "currentVersion":  "V1.0",
+                            "status":  "reviewing",
+                            "workflowStep":  3,
+                            "relatedTaskId":  6,
+                            "description":  null,
+                            "effectiveDate":  null
+                        },
+                        {
+                            "id":  4,
+                            "code":  "QT-KD.02",
+                            "name":  "Quy trình xử lý khiếu nại khách hàng",
+                            "docType":  "procedure",
+                            "departmentId":  4,
+                            "ownerId":  5,
+                            "currentVersion":  "V0.2",
+                            "status":  "approval_pending",
+                            "workflowStep":  4,
+                            "relatedTaskId":  6,
+                            "description":  null,
+                            "effectiveDate":  null
+                        },
+                        {
+                            "id":  7,
+                            "code":  "QT-KT.01",
+                            "name":  "Quy trình kiểm tra sản phẩm",
+                            "docType":  "procedure",
+                            "departmentId":  5,
+                            "ownerId":  5,
+                            "currentVersion":  "V0.3",
+                            "status":  "approval_pending",
+                            "workflowStep":  4,
+                            "relatedTaskId":  8,
+                            "description":  null,
+                            "effectiveDate":  null
+                        }
+                    ]
+}
+##### DOCUMENTS HTTP 200 #####
+{
+    "data":  [
+                 {
+                     "id":  6,
+                     "code":  "CQT-KD.01",
+                     "name":  "Biểu mẫu: Phiếu báo giá",
+                     "docType":  "form",
+                     "departmentId":  4,
+                     "ownerId":  5,
+                     "currentVersion":  "V1.0",
+                     "status":  "published",
+                     "workflowStep":  5,
+                     "relatedTaskId":  null,
+                     "description":  null,
+                     "effectiveDate":  "2026-01-01",
+                     "versions":  [
+
+                                  ],
+                     "approvals":  [
+
+                                   ]
+                 },
+                 {
+                     "id":  5,
+                     "code":  "QT-BCN.01",
+                     "name":  "Sổ tay chất lượng (QMS Manual)",
+                     "docType":  "manual",
+                     "departmentId":  2,
+                     "ownerId":  3,
+                     "currentVersion":  "V2.0",
+                     "status":  "draft",
+                     "workflowStep":  1,
+                     "relatedTaskId":  7,
+                     "description":  null,
+                     "effectiveDate":  null,
+                     "versions":  [
+
+                                  ],
+                     "approvals":  [
+
+                                   ]
+                 },
+                 {
+                     "id":  1,
+                     "code":  "QT-HCNS.01",
+                     "name":  "Quy trình quản lý nhân sự",
+                     "docType":  "procedure",
+                     "departmentId":  3,
+                     "ownerId":  5,
+                     "currentVersion":  "V1.2",
+                     "status":  "published",
+                     "workflowStep":  5,
+                     "relatedTaskId":  null,
+                     "description":  null,
+                     "effectiveDate":  null,
+                     "versions":  [
+
+                                  ],
+                     "approvals":  [
+
+                                   ]
+                 },
+                 {
+                     "id":  2,
+                     "code":  "QT-HCNS.02",
+                     "name":  "Quy trình đào tạo và phát triển",
+                     "docType":  "procedure",
+                     "departmentId":  3,
+                     "ownerId":  5,
+                     "currentVersion":  "V0.1",
+                     "status":  "draft",
+                     "workflowStep":  1,
+                     "relatedTaskId":  5,
+                     "description":  null,
+                     "effectiveDate":  null,
+                     "versions":  [
+
+                                  ],
+                     "approvals":  [
+
+                                   ]
+                 },
+                 {
+                     "id":  3,
+                     "code":  "QT-KD.01",
+                     "name":  "Quy trình bán hàng và ký hợp đồng",
+                     "docType":  "procedure",
+                     "departmentId":  4,
+                     "ownerId":  5,
+                     "currentVersion":  "V1.0",
+                     "status":  "reviewing",
+                     "workflowStep":  3,
+                     "relatedTaskId":  6,
+                     "description":  null,
+                     "effectiveDate":  null,
+                     "versions":  [
+
+                                  ],
+                     "approvals":  [
+
+                                   ]
+                 },
+                 {
+                     "id":  4,
+                     "code":  "QT-KD.02",
+                     "name":  "Quy trình xử lý khiếu nại khách hàng",
+                     "docType":  "procedure",
+                     "departmentId":  4,
+                     "ownerId":  5,
+                     "currentVersion":  "V0.2",
+                     "status":  "approval_pending",
+                     "workflowStep":  4,
+                     "relatedTaskId":  6,
+                     "description":  null,
+                     "effectiveDate":  null,
+                     "versions":  [
+
+                                  ],
+                     "approvals":  [
+
+                                   ]
+                 },
+                 {
+                     "id":  7,
+                     "code":  "QT-KT.01",
+                     "name":  "Quy trình kiểm tra sản phẩm",
+                     "docType":  "procedure",
+                     "departmentId":  5,
+                     "ownerId":  5,
+                     "currentVersion":  "V0.3",
+                     "status":  "approval_pending",
+                     "workflowStep":  4,
+                     "relatedTaskId":  8,
+                     "description":  null,
+                     "effectiveDate":  null,
+                     "versions":  [
+
+                                  ],
+                     "approvals":  [
+
+                                   ]
+                 },
+                 {
+                     "id":  8,
+                     "code":  "QTCB.01",
+                     "name":  "Chính sách chất lượng",
+                     "docType":  "policy",
+                     "departmentId":  2,
+                     "ownerId":  3,
+                     "currentVersion":  "V1.0",
+                     "status":  "published",
+                     "workflowStep":  5,
+                     "relatedTaskId":  null,
+                     "description":  null,
+                     "effectiveDate":  "2026-01-01",
+                     "versions":  [
+
+                                  ],
+                     "approvals":  [
+
+                                   ]
+                 }
+             ]
+}
+##### ACTIONS HTTP 500 #####
+{
+    "message":  "App\\Models\\Action::evidences(): Return value must be of type App\\Models\\HasMany, Illuminate\\Database\\Eloquent\\Relations\\HasMany returned",
+    "exception":  "TypeError",
+    "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\app\\Models\\Action.php",
+    "line":  49,
+    "trace":  [
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Database\\Eloquent\\Builder.php",
+                      "line":  876,
+                      "function":  "evidences",
+                      "class":  "App\\Models\\Action",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Database\\Eloquent\\Relations\\Relation.php",
+                      "line":  120,
+                      "function":  "Illuminate\\Database\\Eloquent\\{closure}",
+                      "class":  "Illuminate\\Database\\Eloquent\\Builder",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Database\\Eloquent\\Builder.php",
+                      "line":  874,
+                      "function":  "noConstraints",
+                      "class":  "Illuminate\\Database\\Eloquent\\Relations\\Relation",
+                      "type":  "::"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Database\\Eloquent\\Builder.php",
+                      "line":  848,
+                      "function":  "getRelation",
+                      "class":  "Illuminate\\Database\\Eloquent\\Builder",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Database\\Eloquent\\Builder.php",
+                      "line":  828,
+                      "function":  "eagerLoadRelation",
+                      "class":  "Illuminate\\Database\\Eloquent\\Builder",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Database\\Eloquent\\Builder.php",
+                      "line":  794,
+                      "function":  "eagerLoadRelations",
+                      "class":  "Illuminate\\Database\\Eloquent\\Builder",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\app\\Http\\Controllers\\Api\\ActionsController.php",
+                      "line":  21,
+                      "function":  "get",
+                      "class":  "Illuminate\\Database\\Eloquent\\Builder",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Routing\\ControllerDispatcher.php",
+                      "line":  47,
+                      "function":  "index",
+                      "class":  "App\\Http\\Controllers\\Api\\ActionsController",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Routing\\Route.php",
+                      "line":  266,
+                      "function":  "dispatch",
+                      "class":  "Illuminate\\Routing\\ControllerDispatcher",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Routing\\Route.php",
+                      "line":  212,
+                      "function":  "runController",
+                      "class":  "Illuminate\\Routing\\Route",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Routing\\Router.php",
+                      "line":  808,
+                      "function":  "run",
+                      "class":  "Illuminate\\Routing\\Route",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
+                      "line":  170,
+                      "function":  "Illuminate\\Routing\\{closure}",
+                      "class":  "Illuminate\\Routing\\Router",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\app\\Http\\Middleware\\PermissionMiddleware.php",
+                      "line":  46,
+                      "function":  "Illuminate\\Pipeline\\{closure}",
+                      "class":  "Illuminate\\Pipeline\\Pipeline",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
+                      "line":  209,
+                      "function":  "handle",
+                      "class":  "App\\Http\\Middleware\\PermissionMiddleware",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Routing\\Middleware\\SubstituteBindings.php",
+                      "line":  51,
+                      "function":  "Illuminate\\Pipeline\\{closure}",
+                      "class":  "Illuminate\\Pipeline\\Pipeline",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
+                      "line":  209,
+                      "function":  "handle",
+                      "class":  "Illuminate\\Routing\\Middleware\\SubstituteBindings",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Auth\\Middleware\\Authenticate.php",
+                      "line":  64,
+                      "function":  "Illuminate\\Pipeline\\{closure}",
+                      "class":  "Illuminate\\Pipeline\\Pipeline",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
+                      "line":  209,
+                      "function":  "handle",
+                      "class":  "Illuminate\\Auth\\Middleware\\Authenticate",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
+                      "line":  127,
+                      "function":  "Illuminate\\Pipeline\\{closure}",
+                      "class":  "Illuminate\\Pipeline\\Pipeline",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Routing\\Router.php",
+                      "line":  807,
+                      "function":  "then",
+                      "class":  "Illuminate\\Pipeline\\Pipeline",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Routing\\Router.php",
+                      "line":  786,
+                      "function":  "runRouteWithinStack",
+                      "class":  "Illuminate\\Routing\\Router",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Routing\\Router.php",
+                      "line":  750,
+                      "function":  "runRoute",
+                      "class":  "Illuminate\\Routing\\Router",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Routing\\Router.php",
+                      "line":  739,
+                      "function":  "dispatchToRoute",
+                      "class":  "Illuminate\\Routing\\Router",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Http\\Kernel.php",
+                      "line":  201,
+                      "function":  "dispatch",
+                      "class":  "Illuminate\\Routing\\Router",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
+                      "line":  170,
+                      "function":  "Illuminate\\Foundation\\Http\\{closure}",
+                      "class":  "Illuminate\\Foundation\\Http\\Kernel",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest.php",
+                      "line":  21,
+                      "function":  "Illuminate\\Pipeline\\{closure}",
+                      "class":  "Illuminate\\Pipeline\\Pipeline",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Http\\Middleware\\ConvertEmptyStringsToNull.php",
+                      "line":  31,
+                      "function":  "handle",
+                      "class":  "Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
+                      "line":  209,
+                      "function":  "handle",
+                      "class":  "Illuminate\\Foundation\\Http\\Middleware\\ConvertEmptyStringsToNull",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest.php",
+                      "line":  21,
+                      "function":  "Illuminate\\Pipeline\\{closure}",
+                      "class":  "Illuminate\\Pipeline\\Pipeline",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Http\\Middleware\\TrimStrings.php",
+                      "line":  51,
+                      "function":  "handle",
+                      "class":  "Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
+                      "line":  209,
+                      "function":  "handle",
+                      "class":  "Illuminate\\Foundation\\Http\\Middleware\\TrimStrings",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Http\\Middleware\\ValidatePostSize.php",
+                      "line":  27,
+                      "function":  "Illuminate\\Pipeline\\{closure}",
+                      "class":  "Illuminate\\Pipeline\\Pipeline",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
+                      "line":  209,
+                      "function":  "handle",
+                      "class":  "Illuminate\\Http\\Middleware\\ValidatePostSize",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Http\\Middleware\\PreventRequestsDuringMaintenance.php",
+                      "line":  110,
+                      "function":  "Illuminate\\Pipeline\\{closure}",
+                      "class":  "Illuminate\\Pipeline\\Pipeline",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
+                      "line":  209,
+                      "function":  "handle",
+                      "class":  "Illuminate\\Foundation\\Http\\Middleware\\PreventRequestsDuringMaintenance",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Http\\Middleware\\HandleCors.php",
+                      "line":  62,
+                      "function":  "Illuminate\\Pipeline\\{closure}",
+                      "class":  "Illuminate\\Pipeline\\Pipeline",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
+                      "line":  209,
+                      "function":  "handle",
+                      "class":  "Illuminate\\Http\\Middleware\\HandleCors",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Http\\Middleware\\TrustProxies.php",
+                      "line":  58,
+                      "function":  "Illuminate\\Pipeline\\{closure}",
+                      "class":  "Illuminate\\Pipeline\\Pipeline",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
+                      "line":  209,
+                      "function":  "handle",
+                      "class":  "Illuminate\\Http\\Middleware\\TrustProxies",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Http\\Middleware\\InvokeDeferredCallbacks.php",
+                      "line":  22,
+                      "function":  "Illuminate\\Pipeline\\{closure}",
+                      "class":  "Illuminate\\Pipeline\\Pipeline",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
+                      "line":  209,
+                      "function":  "handle",
+                      "class":  "Illuminate\\Foundation\\Http\\Middleware\\InvokeDeferredCallbacks",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
+                      "line":  127,
+                      "function":  "Illuminate\\Pipeline\\{closure}",
+                      "class":  "Illuminate\\Pipeline\\Pipeline",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Http\\Kernel.php",
+                      "line":  176,
+                      "function":  "then",
+                      "class":  "Illuminate\\Pipeline\\Pipeline",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Http\\Kernel.php",
+                      "line":  145,
+                      "function":  "sendRequestThroughRouter",
+                      "class":  "Illuminate\\Foundation\\Http\\Kernel",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Application.php",
+                      "line":  1220,
+                      "function":  "handle",
+                      "class":  "Illuminate\\Foundation\\Http\\Kernel",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\public\\index.php",
+                      "line":  17,
+                      "function":  "handleRequest",
+                      "class":  "Illuminate\\Foundation\\Application",
+                      "type":  "-\u003e"
+                  },
+                  {
+                      "file":  "D:\\WorkSpace\\prj_eQMS\\backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\resources\\server.php",
+                      "line":  23,
+                      "function":  "require_once"
+                  }
+              ]
+}
+##### USERS HTTP 200 #####
+{
+    "data":  [
+                 {
+                     "id":  1,
+                     "username":  "admin",
+                     "fullName":  "Nguyễn Minh Admin",
+                     "email":  "admin@dmc.vn",
+                     "departmentId":  1,
+                     "departmentName":  "Ban Giám đốc",
+                     "active":  true,
+                     "roleCodes":  [
+                                       "super_admin"
+                                   ],
+                     "roleNames":  [
+                                       "System Admin"
+                                   ],
+                     "lastLoginAt":  "2026-10-10T11:06:26+07:00",
+                     "createdAt":  "2026-10-09T22:24:29+07:00"
+                 },
+                 {
+                     "id":  2,
+                     "username":  "leader",
+                     "fullName":  "Trần Văn Long",
+                     "email":  "long.tv@dmc.vn",
+                     "departmentId":  2,
+                     "departmentName":  "Ban ISO",
+                     "active":  true,
+                     "roleCodes":  [
+                                       "iso_leader"
+                                   ],
+                     "roleNames":  [
+                                       "ISO Committee Leader"
+                                   ],
+                     "lastLoginAt":  "2026-10-10T00:49:08+07:00",
+                     "createdAt":  "2026-10-09T22:24:29+07:00"
+                 },
+                 {
+                     "id":  3,
+                     "username":  "deputy",
+                     "fullName":  "Lê Thị Hoa",
+                     "email":  "hoa.lt@dmc.vn",
+                     "departmentId":  2,
+                     "departmentName":  "Ban ISO",
+                     "active":  true,
+                     "roleCodes":  [
+                                       "iso_deputy"
+                                   ],
+                     "roleNames":  [
+                                       "ISO Committee Deputy"
+                                   ],
+                     "lastLoginAt":  null,
+                     "createdAt":  "2026-10-09T22:24:29+07:00"
+                 },
+                 {
+                     "id":  4,
+                     "username":  "coordinator",
+                     "fullName":  "Phạm Văn Nam",
+                     "email":  "nam.pv@dmc.vn",
+                     "departmentId":  2,
+                     "departmentName":  "Ban ISO",
+                     "active":  true,
+                     "roleCodes":  [
+                                       "iso_coordinator"
+                                   ],
+                     "roleNames":  [
+                                       "ISO Coordinator"
+                                   ],
+                     "lastLoginAt":  null,
+                     "createdAt":  "2026-10-09T22:24:29+07:00"
+                 },
+                 {
+                     "id":  5,
+                     "username":  "owner",
+                     "fullName":  "Hoàng Thị Mai",
+                     "email":  "mai.ht@dmc.vn",
+                     "departmentId":  3,
+                     "departmentName":  "Phòng Hành chính – Nhân sự",
+                     "active":  true,
+                     "roleCodes":  [
+                                       "document_owner"
+                                   ],
+                     "roleNames":  [
+                                       "Document Owner"
+                                   ],
+                     "lastLoginAt":  null,
+                     "createdAt":  "2026-10-09T22:24:30+07:00"
+                 },
+                 {
+                     "id":  6,
+                     "username":  "manager",
+                     "fullName":  "Vũ Văn Trung",
+                     "email":  "trung.vv@dmc.vn",
+                     "departmentId":  5,
+                     "departmentName":  "Phòng Kỹ thuật – Đảm bảo chất lượng",
+                     "active":  true,
+                     "roleCodes":  [
+                                       "dept_manager"
+                                   ],
+                     "roleNames":  [
+                                       "Department Manager"
+                                   ],
+                     "lastLoginAt":  null,
+                     "createdAt":  "2026-10-09T22:24:30+07:00"
+                 },
+                 {
+                     "id":  7,
+                     "username":  "auditor",
+                     "fullName":  "Đặng Văn Phúc",
+                     "email":  "phuc.dv@dmc.vn",
+                     "departmentId":  2,
+                     "departmentName":  "Ban ISO",
+                     "active":  true,
+                     "roleCodes":  [
+                                       "auditor"
+                                   ],
+                     "roleNames":  [
+                                       "Auditor"
+                                   ],
+                     "lastLoginAt":  null,
+                     "createdAt":  "2026-10-09T22:24:30+07:00"
+                 },
+                 {
+                     "id":  8,
+                     "username":  "user",
+                     "fullName":  "Nguyễn Văn Hùng",
+                     "email":  "hung.nv@dmc.vn",
+                     "departmentId":  4,
+                     "departmentName":  "Phòng Kinh doanh",
+                     "active":  true,
+                     "roleCodes":  [
+                                       "normal_user"
+                                   ],
+                     "roleNames":  [
+                                       "Normal User"
+                                   ],
+                     "lastLoginAt":  "2026-10-10T00:49:09+07:00",
+                     "createdAt":  "2026-10-09T22:24:30+07:00"
+                 }
+             ]
+}
+##### ROLES HTTP 200 #####
+{
+    "data":  [
+                 {
+                     "id":  1,
+                     "code":  "super_admin",
+                     "name":  "System Admin",
+                     "description":  "Toàn quyền hệ thống",
+                     "permissions":  [
+                                         "dashboard.view",
+                                         "master_plan.view",
+                                         "master_plan.create",
+                                         "master_plan.update",
+                                         "master_plan.assign",
+                                         "master_plan.close",
+                                         "document.view",
+                                         "document.create",
+                                         "document.update",
+                                         "document.submit",
+                                         "document.review",
+                                         "document.approve",
+                                         "document.publish",
+                                         "action.view",
+                                         "action.create",
+                                         "action.update",
+                                         "action.verify",
+                                         "action.close",
+                                         "issue.create",
+                                         "user.view",
+                                         "user.create",
+                                         "user.update",
+                                         "role.view",
+                                         "role.manage",
+                                         "department.view"
+                                     ]
+                 },
+                 {
+                     "id":  2,
+                     "code":  "iso_leader",
+                     "name":  "ISO Committee Leader",
+                     "description":  "Chỉ đạo, approve",
+                     "permissions":  [
+                                         "dashboard.view",
+                                         "master_plan.view",
+                                         "master_plan.create",
+                                         "master_plan.update",
+                                         "master_plan.assign",
+                                         "master_plan.close",
+                                         "document.view",
+                                         "document.review",
+                                         "document.approve",
+                                         "document.publish",
+                                         "action.view",
+                                         "action.create",
+                                         "action.update",
+                                         "action.verify",
+                                         "action.close",
+                                         "department.view"
+                                     ]
+                 },
+                 {
+                     "id":  3,
+                     "code":  "iso_deputy",
+                     "name":  "ISO Committee Deputy",
+                     "description":  "Điều phối Master Plan",
+                     "permissions":  [
+                                         "dashboard.view",
+                                         "master_plan.view",
+                                         "master_plan.create",
+                                         "master_plan.update",
+                                         "master_plan.assign",
+                                         "master_plan.close",
+                                         "document.view",
+                                         "document.create",
+                                         "document.update",
+                                         "document.submit",
+                                         "document.review",
+                                         "action.view",
+                                         "action.create",
+                                         "action.update",
+                                         "action.verify",
+                                         "department.view"
+                                     ]
+                 },
+                 {
+                     "id":  4,
+                     "code":  "iso_member",
+                     "name":  "ISO Committee Member",
+                     "description":  "Đại diện phòng, rà soát",
+                     "permissions":  [
+                                         "dashboard.view",
+                                         "master_plan.view",
+                                         "document.view",
+                                         "document.update",
+                                         "document.submit",
+                                         "document.review",
+                                         "action.view",
+                                         "action.update",
+                                         "department.view"
+                                     ]
+                 },
+                 {
+                     "id":  5,
+                     "code":  "iso_coordinator",
+                     "name":  "ISO Coordinator",
+                     "description":  "Cập nhật tiến độ",
+                     "permissions":  [
+                                         "dashboard.view",
+                                         "master_plan.view",
+                                         "master_plan.update",
+                                         "document.view",
+                                         "action.view",
+                                         "action.update",
+                                         "action.verify",
+                                         "department.view"
+                                     ]
+                 },
+                 {
+                     "id":  6,
+                     "code":  "dept_manager",
+                     "name":  "Department Manager",
+                     "description":  "Review/approve trong phạm vi phòng",
+                     "permissions":  [
+                                         "dashboard.view",
+                                         "master_plan.view",
+                                         "document.view",
+                                         "document.review",
+                                         "document.approve",
+                                         "action.view",
+                                         "action.update",
+                                         "department.view"
+                                     ]
+                 },
+                 {
+                     "id":  7,
+                     "code":  "document_owner",
+                     "name":  "Document Owner",
+                     "description":  "Soạn thảo, cập nhật tài liệu",
+                     "permissions":  [
+                                         "dashboard.view",
+                                         "master_plan.view",
+                                         "document.view",
+                                         "document.create",
+                                         "document.update",
+                                         "document.submit",
+                                         "action.view",
+                                         "department.view"
+                                     ]
+                 },
+                 {
+                     "id":  8,
+                     "code":  "auditor",
+                     "name":  "Auditor",
+                     "description":  "Audit, tạo Action",
+                     "permissions":  [
+                                         "dashboard.view",
+                                         "master_plan.view",
+                                         "document.view",
+                                         "action.view",
+                                         "action.create",
+                                         "department.view"
+                                     ]
+                 },
+                 {
+                     "id":  9,
+                     "code":  "normal_user",
+                     "name":  "Normal User",
+                     "description":  "Xem + thực hiện Action được giao",
+                     "permissions":  [
+                                         "dashboard.view",
+                                         "document.view",
+                                         "action.view",
+                                         "action.update",
+                                         "department.view"
+                                     ]
+                 }
+             ]
+}
+
