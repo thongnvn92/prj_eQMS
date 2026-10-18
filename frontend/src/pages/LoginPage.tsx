@@ -36,17 +36,16 @@ export default function LoginPage() {
               DMC eQMS
             </Typography.Title>
             <Typography.Paragraph style={{ color: 'rgba(255,255,255,0.9)', fontSize: 15 }}>
-              Hệ thống quản lý ISO & Chất lượng điện tử – thay thế các file Excel rời rạc bằng một
-              nguồn dữ liệu tập trung.
+              Hệ thống quản lý ISO & Chất lượng.
             </Typography.Paragraph>
             <Typography.Paragraph style={{ color: 'rgba(255,255,255,0.75)' }}>
-              • ISO Master Plan T10/2026 – T12/2027
+              • Tổng hợp phân tích báo cáo chất lượng
               <br />
-              • Document Control: soạn thảo → thẩm định → phê duyệt → ban hành
+              • Master Plan
               <br />
-              • Action/CAPA theo deadline và evidence
+              • Document Control
               <br />
-              • Phân quyền chi tiết theo từng vai trò ISO
+              • Quản lý Action - Rủi ro
             </Typography.Paragraph>
           </div>
         </Col>
