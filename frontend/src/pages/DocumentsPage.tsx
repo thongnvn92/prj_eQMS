@@ -536,7 +536,15 @@ export default function DocumentsPage() {
               </div>
             ),
           }}
-          pagination={{ pageSize: 10, showSizeChanger: true }}
+          pagination={{
+            // Mặc định 100 tài liệu/trang; dùng defaultPageSize (uncontrolled) để người dùng
+            // đổi cỡ trang có tác dụng thật – antd ghi đè `pageSize` cố định ở mỗi render.
+            defaultPageSize: 100,
+            showSizeChanger: true,
+            pageSizeOptions: ['50', '100', '200'],
+            showQuickJumper: true,
+            showTotal: (total, range) => `${range[0]}–${range[1]} / ${total} tài liệu`,
+          }}
         />
       </Card>
 

@@ -16,6 +16,9 @@ class DepartmentsSeeder extends Seeder
             ['code' => 'BM04', 'name' => 'Phòng Kinh doanh', 'description' => 'Kinh doanh – Khách hàng', 'is_active' => true],
             ['code' => 'BM05', 'name' => 'Phòng Kỹ thuật – Đảm bảo chất lượng', 'description' => 'Kỹ thuật + QA', 'is_active' => true],
             ['code' => 'BM06', 'name' => 'Phòng Sản xuất', 'description' => 'Sản xuất – Thương mại', 'is_active' => true],
+            // Phòng phụ trách theo bảng theo dõi tài liệu ISO (Q4/2026–Q4/2027).
+            ['code' => 'BM07', 'name' => 'Phòng Tài chính – Kế toán', 'description' => 'Tài chính – Kế toán (TCKT)', 'is_active' => true],
+            ['code' => 'BM08', 'name' => 'Phòng Kỹ thuật – Sản xuất', 'description' => 'Kỹ thuật – Sản xuất (KTSX)', 'is_active' => true],
         ];
 
         foreach ($depts as $d) {

@@ -103,6 +103,7 @@ export const DOC_TYPE_LABEL: Record<string, string> = {
   work_instruction: 'Hướng dẫn công việc',
   form: 'Biểu mẫu',
   record: 'Bản ghi',
+  standard: 'Tiêu chuẩn',
 };
 
 export const ACTION_SOURCE_LABEL: Record<string, string> = {

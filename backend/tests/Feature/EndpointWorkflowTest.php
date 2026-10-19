@@ -320,14 +320,14 @@ class EndpointWorkflowTest extends TestCase
     public function test_document_publish_first_time_creates_v10(): void
     {
         $this->tx(function () {
-            // doc 7 approval_pending V0.3 → approve rồi publish (leader: approve+publish).
+            // doc 4 (QT-HCNS.01) approval_pending V0.3 → approve rồi publish (leader: approve+publish).
             $headers = $this->authAs('leader', 'Leader123!');
 
-            $this->withHeaders($headers)->postJson('/api/documents/7/transition', [
+            $this->withHeaders($headers)->postJson('/api/documents/4/transition', [
                 'action' => 'approve',
             ])->assertOk()->assertJsonPath('status', 'approved');
 
-            $response = $this->withHeaders($headers)->postJson('/api/documents/7/transition', [
+            $response = $this->withHeaders($headers)->postJson('/api/documents/4/transition', [
                 'action' => 'publish',
             ]);
 
@@ -337,7 +337,7 @@ class EndpointWorkflowTest extends TestCase
 
             // Version V1.0 là current + effective_date được set.
             $this->assertDatabaseHas('document_versions', [
-                'document_id' => 7,
+                'document_id' => 4,
                 'version' => 'V1.0',
                 'is_current' => true,
             ]);

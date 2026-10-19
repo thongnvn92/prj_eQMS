@@ -10,7 +10,7 @@ export type DocumentStatus =
   | 'draft' | 'reviewing' | 'approval_pending' | 'approved' | 'published' | 'obsolete' | 'archived';
 
 export type DocumentType =
-  | 'policy' | 'manual' | 'regulation' | 'procedure' | 'work_instruction' | 'form' | 'record';
+  | 'policy' | 'manual' | 'regulation' | 'procedure' | 'work_instruction' | 'form' | 'record' | 'standard';
 
 export type ActionStatus =
   | 'open' | 'in_progress' | 'blocked' | 'overdue' | 'pending_verification' | 'verified' | 'closed';

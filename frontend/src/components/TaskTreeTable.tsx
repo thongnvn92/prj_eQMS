@@ -291,9 +291,11 @@ export default function TaskTreeTable({
           },
         };
       }}
-      // Paging 50 công việc/trang (mặc định), cho đổi cỡ trang + nhảy trang nhanh.
+      // Paging 100 công việc/trang (mặc định), cho đổi cỡ trang + nhảy trang nhanh.
+      // Dùng defaultPageSize (uncontrolled) để đổi cỡ trang có tác dụng thật –
+      // antd ghi đè `pageSize` cố định ở mỗi render nên selector cỡ trang sẽ bị bỏ qua.
       pagination={{
-        pageSize: 50,
+        defaultPageSize: 100,
         showSizeChanger: true,
         pageSizeOptions: ['50', '100', '200'],
         showQuickJumper: true,

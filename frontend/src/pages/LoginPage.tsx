@@ -85,6 +85,7 @@ export default function LoginPage() {
               </Button>
             </Form>
 
+            {/* Ẩn phần Tài khoản demo (bấm để điền nhanh) – thông tin xem tại docs/demo-accounts.md
             <Divider plain>Tài khoản demo (bấm để điền nhanh)</Divider>
             <div>
               {DEMO_ACCOUNTS.map((acc) => (
@@ -103,6 +104,7 @@ export default function LoginPage() {
             <Typography.Paragraph type="secondary" style={{ fontSize: 12, marginTop: 8, marginBottom: 0 }}>
               Mỗi tài khoản có tập quyền khác nhau – thử đổi vai trò để thấy menu/nút thay đổi.
             </Typography.Paragraph>
+            */}
           </Card>
         </Col>
       </Row>

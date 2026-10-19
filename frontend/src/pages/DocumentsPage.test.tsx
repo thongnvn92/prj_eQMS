@@ -313,3 +313,41 @@ describe('DocumentsPage cột Thao tác + nút Xoá', () => {
   }, 15000);
 });
 
+// ============================================================
+// Phân trang danh sách tài liệu (defaultPageSize – uncontrolled)
+// ============================================================
+describe('DocumentsPage phân trang', () => {
+  /** Mở Select đổi cỡ trang trong footer bảng rồi chọn option theo tiền lệ label ("50"...). */
+  async function selectPageSize(labelPrefix: string) {
+    const changer = document.querySelector('.ant-pagination-options-size-changer');
+    expect(changer).not.toBeNull();
+    fireEvent.mouseDown(changer!.querySelector('.ant-select-selector')!);
+    const options = await screen.findAllByRole('option');
+    const target = options.find((o) => o.textContent?.trim().startsWith(labelPrefix));
+    expect(target, `Không tìm thấy option cỡ trang "${labelPrefix}"`).toBeTruthy();
+    fireEvent.click(target!);
+  }
+
+  it('mặc định 100 tài liệu/trang; đổi cỡ trang 50 → hiển thị đúng 50 dòng', async () => {
+    authState.perms = [...DOC_PERMS];
+    const docs = Array.from({ length: 125 }, (_, i) => makeDoc(i + 1, 'draft'));
+    renderPage(docs);
+
+    // Mặc định: 125 tài liệu → 100 dòng đầu, dòng 101 không nằm ở trang 1.
+    expect(await screen.findByText('QT-100.01', {}, { timeout: 10000 })).toBeInTheDocument();
+    expect(screen.queryByText('QT-101.01')).toBeNull();
+    expect(screen.getByText('1–100 / 125 tài liệu')).toBeInTheDocument();
+
+    // Đổi cỡ trang 50 → bảng hiển thị đúng 50 dòng tương ứng.
+    await selectPageSize('50');
+    expect(await screen.findByText('QT-50.01', {}, { timeout: 10000 })).toBeInTheDocument();
+    expect(screen.queryByText('QT-51.01')).toBeNull();
+    expect(screen.getByText('1–50 / 125 tài liệu')).toBeInTheDocument();
+
+    // Đổi cỡ trang 200 (> tổng) → hiển thị toàn bộ 125 dòng.
+    await selectPageSize('200');
+    expect(await screen.findByText('QT-125.01', {}, { timeout: 10000 })).toBeInTheDocument();
+    expect(screen.getByText('1–125 / 125 tài liệu')).toBeInTheDocument();
+  }, 40000);
+});
+

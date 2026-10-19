@@ -177,7 +177,7 @@ class DocumentsController extends Controller
         $data = $request->validate([
             'code' => ['required', 'string', 'max:50', 'unique:documents,code'],
             'name' => ['required', 'string', 'max:250'],
-            'docType' => ['required', 'string', 'in:policy,manual,regulation,procedure,work_instruction,form,record'],
+            'docType' => ['required', 'string', 'in:policy,manual,regulation,procedure,work_instruction,form,record,standard'],
             'departmentId' => ['nullable', 'integer', 'exists:departments,id'],
             'ownerId' => ['nullable', 'integer', 'exists:users,id'],
             'relatedTaskId' => ['nullable', 'integer', 'exists:master_plan_tasks,id'],
@@ -257,6 +257,7 @@ class DocumentsController extends Controller
             if (is_string($normalized)) {
                 $line = is_array($row) && isset($row['line']) && is_numeric($row['line']) ? (int) $row['line'] : null;
                 $errors[] = ['index' => $index, 'line' => $line, 'message' => $normalized];
+
                 continue;
             }
             $seen[strtolower($normalized['code'])] = true;
@@ -329,7 +330,7 @@ class DocumentsController extends Controller
             return 'name tối đa 250 ký tự.';
         }
         $docType = trim((string) ($row['docType'] ?? ''));
-        if (! in_array($docType, ['policy', 'manual', 'regulation', 'procedure', 'work_instruction', 'form', 'record'], true)) {
+        if (! in_array($docType, ['policy', 'manual', 'regulation', 'procedure', 'work_instruction', 'form', 'record', 'standard'], true)) {
             return 'docType không hợp lệ.';
         }
         $departmentId = $row['departmentId'] ?? null;
@@ -379,7 +380,7 @@ class DocumentsController extends Controller
         $data = $request->validate([
             'code' => ['sometimes', 'string', 'max:50', 'unique:documents,code,'.$doc->id],
             'name' => ['sometimes', 'string', 'max:250'],
-            'docType' => ['sometimes', 'string', 'in:policy,manual,regulation,procedure,work_instruction,form,record'],
+            'docType' => ['sometimes', 'string', 'in:policy,manual,regulation,procedure,work_instruction,form,record,standard'],
             'departmentId' => ['nullable', 'integer', 'exists:departments,id'],
             'ownerId' => ['nullable', 'integer', 'exists:users,id'],
             'relatedTaskId' => ['nullable', 'integer', 'exists:master_plan_tasks,id'],

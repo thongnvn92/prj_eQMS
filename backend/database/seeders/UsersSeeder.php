@@ -20,6 +20,19 @@ class UsersSeeder extends Seeder
             ['username' => 'manager', 'full_name' => 'Vũ Văn Trung', 'email' => 'trung.vv@dmc.vn', 'department_id' => 5, 'role_codes' => ['dept_manager'], 'active' => true, 'password' => 'Manager123!'],
             ['username' => 'auditor', 'full_name' => 'Đặng Văn Phúc', 'email' => 'phuc.dv@dmc.vn', 'department_id' => 2, 'role_codes' => ['auditor'], 'active' => true, 'password' => 'Audit123!'],
             ['username' => 'user', 'full_name' => 'Nguyễn Văn Hùng', 'email' => 'hung.nv@dmc.vn', 'department_id' => 4, 'role_codes' => ['normal_user'], 'active' => true, 'password' => 'User123!'],
+            // Người biên soạn theo bảng theo dõi tài liệu ISO (Ban ISO Q4/2026–Q4/2027).
+            ['username' => 'chauloan', 'full_name' => 'Châu Loan', 'email' => 'loan.chau@dmc.vn', 'department_id' => 2, 'role_codes' => ['document_owner'], 'active' => true, 'password' => 'Eqms123!'],
+            ['username' => 'phamhanh', 'full_name' => 'Phạm Hạnh', 'email' => 'hanh.ph@dmc.vn', 'department_id' => 3, 'role_codes' => ['document_owner'], 'active' => true, 'password' => 'Eqms123!'],
+            ['username' => 'minhhang', 'full_name' => 'Minh Hằng', 'email' => 'hang.minh@dmc.vn', 'department_id' => 3, 'role_codes' => ['document_owner'], 'active' => true, 'password' => 'Eqms123!'],
+            ['username' => 'myhuong', 'full_name' => 'Mỹ Hương', 'email' => 'huong.my@dmc.vn', 'department_id' => 3, 'role_codes' => ['document_owner'], 'active' => true, 'password' => 'Eqms123!'],
+            ['username' => 'hongthom', 'full_name' => 'Hồng Thơm', 'email' => 'thom.hong@dmc.vn', 'department_id' => 3, 'role_codes' => ['document_owner'], 'active' => true, 'password' => 'Eqms123!'],
+            ['username' => 'khaihoang', 'full_name' => 'Khải Hoàng', 'email' => 'hoang.khai@dmc.vn', 'department_id' => 4, 'role_codes' => ['document_owner'], 'active' => true, 'password' => 'Eqms123!'],
+            ['username' => 'thaibinh', 'full_name' => 'Thái Bình', 'email' => 'binh.thai@dmc.vn', 'department_id' => 4, 'role_codes' => ['document_owner'], 'active' => true, 'password' => 'Eqms123!'],
+            ['username' => 'minhtuan', 'full_name' => 'Minh Tuân', 'email' => 'tuan.minh@dmc.vn', 'department_id' => 4, 'role_codes' => ['document_owner'], 'active' => true, 'password' => 'Eqms123!'],
+            ['username' => 'thuytrang', 'full_name' => 'Thùy Trang', 'email' => 'trang.thuy@dmc.vn', 'department_id' => 7, 'role_codes' => ['document_owner'], 'active' => true, 'password' => 'Eqms123!'],
+            ['username' => 'thuthuy', 'full_name' => 'Thu Thủy', 'email' => 'thuy.thu@dmc.vn', 'department_id' => 7, 'role_codes' => ['document_owner'], 'active' => true, 'password' => 'Eqms123!'],
+            ['username' => 'tanve', 'full_name' => 'Tấn Vệ', 'email' => 've.tan@dmc.vn', 'department_id' => 8, 'role_codes' => ['document_owner'], 'active' => true, 'password' => 'Eqms123!'],
+            ['username' => 'hoanghuy', 'full_name' => 'Hoàng Huy', 'email' => 'huy.hoang@dmc.vn', 'department_id' => 8, 'role_codes' => ['document_owner'], 'active' => true, 'password' => 'Eqms123!'],
         ];
 
         foreach ($users as $u) {

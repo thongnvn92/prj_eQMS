@@ -11,6 +11,7 @@ enum DocumentType: string
     case WorkInstruction = 'work_instruction';
     case Form = 'form';
     case Record = 'record';
+    case Standard = 'standard';
 
     public function label(): string
     {
@@ -22,6 +23,7 @@ enum DocumentType: string
             self::WorkInstruction->value => 'Hướng dẫn công việc',
             self::Form->value => 'Biểu mẫu',
             self::Record->value => 'Bản ghi',
+            self::Standard->value => 'Tiêu chuẩn',
         };
     }
 }
