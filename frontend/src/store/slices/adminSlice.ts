@@ -168,7 +168,7 @@ export const createPhase = createAsyncThunk(
   'admin/createPhase',
   async (input: { code: string; name: string; sortOrder?: number; startDate?: string; endDate?: string }, { dispatch }) => {
     const phase = await api.createPhase(input);
-    await Promise.all([dispatch(fetchPhases()), dispatch(fetchLookups())]);
+    await Promise.all([dispatch(fetchPhases()), dispatch(fetchLookups()), dispatch(fetchMasterPlan())]);
     return phase;
   },
 );
@@ -177,14 +177,14 @@ export const updatePhase = createAsyncThunk(
   'admin/updatePhase',
   async (input: { id: number; patch: { code?: string; name?: string; sortOrder?: number; startDate?: string; endDate?: string } }, { dispatch }) => {
     const phase = await api.updatePhase(input.id, input.patch);
-    await Promise.all([dispatch(fetchPhases()), dispatch(fetchLookups())]);
+    await Promise.all([dispatch(fetchPhases()), dispatch(fetchLookups()), dispatch(fetchMasterPlan())]);
     return phase;
   },
 );
 
 export const deletePhase = createAsyncThunk('admin/deletePhase', async (id: number, { dispatch }) => {
   const res = await api.deletePhase(id);
-  await Promise.all([dispatch(fetchPhases()), dispatch(fetchLookups())]);
+  await Promise.all([dispatch(fetchPhases()), dispatch(fetchLookups()), dispatch(fetchMasterPlan())]);
   return res;
 });
 
@@ -285,4 +285,3 @@ const adminSlice = createSlice({
 });
 
 export default adminSlice.reducer;
-

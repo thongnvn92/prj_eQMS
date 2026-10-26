@@ -233,6 +233,25 @@ describe('DocumentsPage version UI', () => {
     fireEvent.click(screen.getByRole('button', { name: /Thêm tài liệu/ }));
     expect(await screen.findByText('Tự động đánh số phiên bản (auto-version)')).toBeInTheDocument();
   });
+
+  it('loads the selected document when reopening the edit modal for another record', async () => {
+    authState.perms = [...DOC_PERMS];
+    renderPage([makeDoc(1, 'draft'), makeDoc(2, 'draft')]);
+    expect(await screen.findByText('QT-01.01')).toBeInTheDocument();
+
+    const firstRow = screen.getByText('QT-01.01').closest('tr');
+    expect(firstRow).not.toBeNull();
+    fireEvent.click(within(firstRow!).getByRole('button', { name: /Sửa/ }));
+    expect(await screen.findByDisplayValue('Tài liệu 1')).toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Hủy' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+    const secondRow = screen.getByText('QT-02.01').closest('tr');
+    expect(secondRow).not.toBeNull();
+    fireEvent.click(within(secondRow!).getByRole('button', { name: /Sửa/ }));
+    expect(await screen.findByDisplayValue('Tài liệu 2')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('Tài liệu 1')).not.toBeInTheDocument();
+  });
 });
 
 // ============================================================
@@ -350,4 +369,3 @@ describe('DocumentsPage phân trang', () => {
     expect(screen.getByText('1–125 / 125 tài liệu')).toBeInTheDocument();
   }, 40000);
 });
-

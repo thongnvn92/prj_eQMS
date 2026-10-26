@@ -164,6 +164,118 @@ function FilesPanel({
   );
 }
 
+type DocumentFormValues = {
+  code: string;
+  name: string;
+  docType: DocumentType;
+  departmentId?: number;
+  ownerId?: string | number;
+  description?: string;
+  changeSummary?: string;
+  autoVersion: boolean;
+  version?: string;
+};
+
+function DocumentEditorModal({
+  editing,
+  lookups,
+  loading,
+  onCancel,
+  onSubmit,
+}: {
+  editing: DocumentItem | null;
+  lookups?: { people: { id: number; fullName: string }[]; departments: { id: number; name: string }[] };
+  loading: boolean;
+  onCancel: () => void;
+  onSubmit: (values: DocumentFormValues) => void;
+}) {
+  const [form] = Form.useForm<DocumentFormValues>();
+  const autoVersionChecked = Form.useWatch('autoVersion', form);
+  const ownerPerson = (lookups?.people ?? []).find((person) => person.id === editing?.ownerId);
+  const currentVersion = editing?.versions?.find((version) => version.version === editing.currentVersion)
+    ?? editing?.versions?.[editing.versions.length - 1];
+  const initialValues: Partial<DocumentFormValues> = editing
+    ? {
+        code: editing.code,
+        name: editing.name,
+        docType: editing.docType,
+        departmentId: editing.departmentId,
+        ownerId: editing.ownerName || ownerPerson?.fullName || (editing.ownerId != null ? String(editing.ownerId) : undefined),
+        description: editing.description,
+        changeSummary: currentVersion?.changeSummary,
+        autoVersion: editing.autoVersion ?? false,
+        version: undefined,
+      }
+    : { autoVersion: false };
+  const handleOk = () => form.validateFields().then(onSubmit).catch(() => undefined);
+
+  return (
+    <Modal
+      title={editing ? `Sửa tài liệu – ${editing.code}` : 'Thêm tài liệu mới'}
+      open
+      width={820}
+      destroyOnHidden
+      onCancel={onCancel}
+      onOk={handleOk}
+      okText="Lưu"
+      cancelText="Hủy"
+      confirmLoading={loading}
+    >
+      <Form form={form} layout="vertical" preserve={false} initialValues={initialValues}>
+        <Form.Item name="code" label="Mã tài liệu" rules={[{ required: true, message: 'Bắt buộc nhập mã tài liệu' }]}>
+          <Input placeholder="VD: QT-HCNS.03" maxLength={50} />
+        </Form.Item>
+        <Form.Item name="name" label="Tên tài liệu" rules={[{ required: true, message: 'Bắt buộc nhập tên tài liệu' }]}>
+          <Input placeholder="VD: Quy trình ..." maxLength={250} />
+        </Form.Item>
+        <Form.Item name="docType" label="Loại tài liệu" rules={[{ required: true, message: 'Bắt buộc chọn loại tài liệu' }]}>
+          <Select
+            placeholder="Chọn loại"
+            options={Object.keys(DOC_TYPE_LABEL).map((value) => ({ value, label: DOC_TYPE_LABEL[value] }))}
+          />
+        </Form.Item>
+        <Form.Item name="departmentId" label="Phòng phụ trách">
+          <Select
+            allowClear
+            placeholder="Chọn phòng"
+            options={(lookups?.departments ?? []).map((department) => ({ value: department.id, label: department.name }))}
+          />
+        </Form.Item>
+        <Form.Item name="ownerId" label="Người biên soạn / chủ trì">
+          <AutoComplete
+            allowClear
+            placeholder="Chọn hoặc nhập tên người biên soạn"
+            options={(lookups?.people ?? []).map((person) => ({ value: person.fullName, label: person.fullName }))}
+            filterOption={(input, option) =>
+              (option?.label as string)?.toLowerCase().includes(input.toLowerCase()) ?? false
+            }
+          />
+        </Form.Item>
+        <Form.Item name="description" label="Mô tả">
+          <Input.TextArea rows={3} placeholder="Mô tả nội dung tài liệu (không bắt buộc)..." />
+        </Form.Item>
+        <Form.Item name="changeSummary" label="Ghi chú phiên bản">
+          <Input placeholder={editing ? 'Nội dung cập nhật...' : 'VD: Dự thảo đầu tiên'} />
+        </Form.Item>
+        <Form.Item
+          name="autoVersion"
+          valuePropName="checked"
+          extra="Tích để hệ thống tự đánh số phiên bản mới (V0.2, V0.3...); bỏ tích để tự nhập số version bên dưới."
+        >
+          <Checkbox>Tự động đánh số phiên bản (auto-version)</Checkbox>
+        </Form.Item>
+        <Form.Item
+          name="version"
+          label="Số version (khi tắt tự động)"
+          extra="Chỉ nhập được khi KHÔNG tích 'Tự động đánh số phiên bản'. Bỏ trống khi đã tích — hệ thống tự tăng dần."
+        >
+          <Input placeholder="VD: V0.2" maxLength={20} disabled={!!autoVersionChecked} />
+        </Form.Item>
+      </Form>
+    </Modal>
+  );
+}
+
 export default function DocumentsPage() {
   const { can } = useAuth();
   const { message } = App.useApp();
@@ -196,14 +308,6 @@ export default function DocumentsPage() {
   const [versionModal, setVersionModal] = useState<{ open: boolean; doc: DocumentItem | null; message: string }>({ open: false, doc: null, message: '' });
   // CR-DOC-UI-002: tài liệu đang chờ xác nhận xóa (mở ConfirmModal chung).
   const [deleteTarget, setDeleteTarget] = useState<DocumentItem | null>(null);
-  const [docForm] = Form.useForm<{
-    code: string; name: string; docType: DocumentType;
-    departmentId?: number; ownerId?: number; description?: string; changeSummary?: string;
-    autoVersion: boolean; version?: string;
-  }>();
-  // CR: bám trạng thái checkbox auto-version để bật/tắt ô nhập version thủ công.
-  const autoVersionChecked = Form.useWatch('autoVersion', docForm);
-
   const nameOf = (id?: number | null) => lookups?.people.find((p) => p.id === id)?.fullName ?? '—';
   const deptOf = (id?: number | null) => lookups?.departments.find((d) => d.id === id)?.name ?? '—';
 
@@ -253,54 +357,48 @@ export default function DocumentsPage() {
 
   const openEdit = (doc: DocumentItem) => setEditing(doc);
 
-  const submitDoc = () => {
-    docForm
-      .validateFields()
-      .then((v) => {
-        const ownerMatch = (lookups?.people ?? []).find(
-          (p) => p.fullName.toLowerCase() === String(v.ownerId ?? '').toLowerCase(),
-        );
-        const resolvedOwnerId = ownerMatch ? ownerMatch.id : (typeof v.ownerId === 'number' ? v.ownerId : undefined);
-        if (editing) {
-          updater.mutate(
-            {
-              id: editing.id,
-              patch: {
-                code: v.code, name: v.name, docType: v.docType,
-                departmentId: v.departmentId, ownerId: resolvedOwnerId ?? null, ownerName: String(v.ownerId ?? '').trim() || undefined,
-                description: v.description, changeSummary: v.changeSummary,
-                autoVersion: v.autoVersion,
-                // Tắt auto → gửi version thủ công; bật auto → BE tự tăng.
-                version: v.autoVersion ? undefined : (v.version ?? '').trim() || undefined,
-              },
-            },
-            {
-              onSuccess: () => {
-                message.success(`Cập nhật tài liệu thành công – ${v.code}`);
-                setEditing(null);
-              },
-              onError: (e) => message.error(e instanceof ApiError ? e.message : 'Cập nhật thất bại'),
-            },
-          );
-        } else {
-          creator.mutate(
-            {
-              code: v.code, name: v.name, docType: v.docType,
-              departmentId: v.departmentId, ownerId: resolvedOwnerId ?? null, ownerName: String(v.ownerId ?? '').trim() || undefined,
-              description: v.description, changeSummary: v.changeSummary,
-              autoVersion: v.autoVersion,
-            },
-            {
-              onSuccess: () => {
-                message.success(`Thêm tài liệu thành công – ${v.code}`);
-                setShowCreate(false);
-              },
-              onError: (e) => message.error(e instanceof ApiError ? e.message : 'Thêm tài liệu thất bại'),
-            },
-          );
-        }
-      })
-      .catch(() => undefined);
+  const submitDoc = (v: DocumentFormValues) => {
+    const ownerMatch = (lookups?.people ?? []).find(
+      (p) => p.fullName.toLowerCase() === String(v.ownerId ?? '').toLowerCase(),
+    );
+    const resolvedOwnerId = ownerMatch ? ownerMatch.id : (typeof v.ownerId === 'number' ? v.ownerId : undefined);
+    if (editing) {
+      updater.mutate(
+        {
+          id: editing.id,
+          patch: {
+            code: v.code, name: v.name, docType: v.docType,
+            departmentId: v.departmentId, ownerId: resolvedOwnerId ?? null, ownerName: String(v.ownerId ?? '').trim() || undefined,
+            description: v.description, changeSummary: v.changeSummary,
+            autoVersion: v.autoVersion,
+            version: v.autoVersion ? undefined : (v.version ?? '').trim() || undefined,
+          },
+        },
+        {
+          onSuccess: () => {
+            message.success(`Cập nhật tài liệu thành công – ${v.code}`);
+            setEditing(null);
+          },
+          onError: (e) => message.error(e instanceof ApiError ? e.message : 'Cập nhật thất bại'),
+        },
+      );
+    } else {
+      creator.mutate(
+        {
+          code: v.code, name: v.name, docType: v.docType,
+          departmentId: v.departmentId, ownerId: resolvedOwnerId ?? null, ownerName: String(v.ownerId ?? '').trim() || undefined,
+          description: v.description, changeSummary: v.changeSummary,
+          autoVersion: v.autoVersion,
+        },
+        {
+          onSuccess: () => {
+            message.success(`Thêm tài liệu thành công – ${v.code}`);
+            setShowCreate(false);
+          },
+          onError: (e) => message.error(e instanceof ApiError ? e.message : 'Thêm tài liệu thất bại'),
+        },
+      );
+    }
   };
 
   const openNewVersion = (doc: DocumentItem) => {
@@ -538,89 +636,16 @@ export default function DocumentsPage() {
         />
       </Card>
 
-      <Modal
-        title={editing ? `Sửa tài liệu – ${editing.code}` : 'Thêm tài liệu mới'}
-        open={showCreate || !!editing}
-        width={820}
-        destroyOnHidden={false}
-        afterOpenChange={(open) => {
-          if (!open) return;
-          if (editing) {
-            const ownerPerson = (lookups?.people ?? []).find((p) => p.id === editing.ownerId);
-            const ownerDisplay = editing.ownerName || ownerPerson?.fullName || (editing.ownerId != null ? String(editing.ownerId) : undefined);
-            const currentVer = editing.versions?.find((v) => v.version === editing.currentVersion) ?? editing.versions?.[editing.versions.length - 1];
-            docForm.setFieldsValue({
-              code: editing.code, name: editing.name, docType: editing.docType,
-              departmentId: editing.departmentId,
-              ownerId: ownerDisplay as any,
-              description: editing.description,
-              changeSummary: currentVer?.changeSummary,
-              autoVersion: editing.autoVersion ?? false,
-              version: undefined,
-            });
-          } else if (showCreate) {
-            docForm.resetFields();
-            docForm.setFieldsValue({ autoVersion: false });
-          }
-        }}
-        onCancel={() => { setShowCreate(false); setEditing(null); }}
-        onOk={submitDoc}
-        okText="Lưu"
-        cancelText="Hủy"
-        confirmLoading={creator.isPending || updater.isPending}
-      >
-        <Form form={docForm} layout="vertical">
-          <Form.Item name="code" label="Mã tài liệu" rules={[{ required: true, message: 'Bắt buộc nhập mã tài liệu' }]}>
-            <Input placeholder="VD: QT-HCNS.03" maxLength={50} />
-          </Form.Item>
-          <Form.Item name="name" label="Tên tài liệu" rules={[{ required: true, message: 'Bắt buộc nhập tên tài liệu' }]}>
-            <Input placeholder="VD: Quy trình ..." maxLength={250} />
-          </Form.Item>
-          <Form.Item name="docType" label="Loại tài liệu" rules={[{ required: true, message: 'Bắt buộc chọn loại tài liệu' }]}>
-            <Select
-              placeholder="Chọn loại"
-              options={Object.keys(DOC_TYPE_LABEL).map((value) => ({ value, label: DOC_TYPE_LABEL[value] }))}
-            />
-          </Form.Item>
-          <Form.Item name="departmentId" label="Phòng phụ trách">
-            <Select
-              allowClear
-              placeholder="Chọn phòng"
-              options={(lookups?.departments ?? []).map((d) => ({ value: d.id, label: d.name }))}
-            />
-          </Form.Item>
-          <Form.Item name="ownerId" label="Người biên soạn / chủ trì">
-            <AutoComplete
-              allowClear
-              placeholder="Chọn hoặc nhập tên người biên soạn"
-              options={(lookups?.people ?? []).map((p) => ({ value: p.fullName, label: p.fullName }))}
-              filterOption={(input, option) =>
-                (option?.label as string)?.toLowerCase().includes(input.toLowerCase()) ?? false
-              }
-            />
-          </Form.Item>
-          <Form.Item name="description" label="Mô tả">
-            <Input.TextArea rows={3} placeholder="Mô tả nội dung tài liệu (không bắt buộc)..." />
-          </Form.Item>
-          <Form.Item name="changeSummary" label="Ghi chú phiên bản">
-            <Input placeholder={editing ? 'Nội dung cập nhật...' : 'VD: Dự thảo đầu tiên'} />
-          </Form.Item>
-          <Form.Item
-            name="autoVersion"
-            valuePropName="checked"
-            extra="Tích để hệ thống tự đánh số phiên bản mới (V0.2, V0.3...); bỏ tích để tự nhập số version bên dưới."
-          >
-            <Checkbox>Tự động đánh số phiên bản (auto-version)</Checkbox>
-          </Form.Item>
-          <Form.Item
-            name="version"
-            label="Số version (khi tắt tự động)"
-            extra="Chỉ nhập được khi KHÔNG tích 'Tự động đánh số phiên bản'. Bỏ trống khi đã tích — hệ thống tự tăng dần."
-          >
-            <Input placeholder="VD: V0.2" maxLength={20} disabled={!!autoVersionChecked} />
-          </Form.Item>
-        </Form>
-      </Modal>
+      {(showCreate || editing) && (
+        <DocumentEditorModal
+          key={editing?.id ?? 'new-document'}
+          editing={editing}
+          lookups={lookups}
+          loading={creator.isPending || updater.isPending}
+          onCancel={() => { setShowCreate(false); setEditing(null); }}
+          onSubmit={submitDoc}
+        />
+      )}
 
       <Modal
         title={

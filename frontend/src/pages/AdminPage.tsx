@@ -63,6 +63,173 @@ interface RoleRow {
   permissions: string[];
 }
 
+type DepartmentFormValues = { code: string; name: string; description?: string; isActive: boolean };
+type PhaseFormValues = { code: string; name: string; sortOrder?: number; startDate?: string; endDate?: string };
+type DocumentStatusFormValues = { label: string; color?: string; sortOrder?: number; isActive: boolean };
+
+function DepartmentFormModal({
+  department,
+  loading,
+  onCancel,
+  onSubmit,
+}: {
+  department: { id: number; code: string; name: string; description?: string; isActive?: boolean } | null;
+  loading: boolean;
+  onCancel: () => void;
+  onSubmit: (values: DepartmentFormValues) => void;
+}) {
+  const [form] = Form.useForm<DepartmentFormValues>();
+  const handleOk = () => form.validateFields().then(onSubmit).catch(() => undefined);
+
+  return (
+    <Modal
+      title={department ? `Sửa phòng ban - ${department.name}` : 'Thêm phòng ban'}
+      open
+      onCancel={onCancel}
+      onOk={handleOk}
+      okText="Lưu"
+      cancelText="Hủy"
+      confirmLoading={loading}
+      destroyOnHidden
+    >
+      <Form
+        form={form}
+        layout="vertical"
+        preserve={false}
+        initialValues={{
+          code: department?.code,
+          name: department?.name,
+          description: department?.description ?? '',
+          isActive: department?.isActive ?? true,
+        }}
+      >
+        <Form.Item name="code" label="Mã phòng ban" rules={[{ required: true, message: 'Bắt buộc' }]}>
+          <Input placeholder="VD: HR" maxLength={20} disabled={!!department} />
+        </Form.Item>
+        <Form.Item name="name" label="Tên phòng ban" rules={[{ required: true, message: 'Bắt buộc' }]}>
+          <Input placeholder="VD: Nhân sự" maxLength={100} />
+        </Form.Item>
+        <Form.Item name="description" label="Mô tả">
+          <Input.TextArea rows={3} placeholder="Mô tả ngắn ..." />
+        </Form.Item>
+        <Form.Item name="isActive" label="Hoạt động" valuePropName="checked">
+          <Switch checkedChildren="Có" unCheckedChildren="Tắt" />
+        </Form.Item>
+      </Form>
+    </Modal>
+  );
+}
+
+function PhaseFormModal({
+  phase,
+  loading,
+  onCancel,
+  onSubmit,
+}: {
+  phase: { id: number; code: string; name: string; sortOrder?: number; startDate?: string; endDate?: string } | null;
+  loading: boolean;
+  onCancel: () => void;
+  onSubmit: (values: PhaseFormValues) => void;
+}) {
+  const [form] = Form.useForm<PhaseFormValues>();
+  const handleOk = () => form.validateFields().then(onSubmit).catch(() => undefined);
+
+  return (
+    <Modal
+      title={phase ? `Sửa giai đoạn - ${phase.name}` : 'Thêm giai đoạn mới'}
+      open
+      onCancel={onCancel}
+      onOk={handleOk}
+      okText="Lưu"
+      cancelText="Hủy"
+      confirmLoading={loading}
+      destroyOnHidden
+    >
+      <Form
+        form={form}
+        layout="vertical"
+        preserve={false}
+        initialValues={{
+          code: phase?.code,
+          name: phase?.name,
+          sortOrder: phase?.sortOrder ?? 0,
+          startDate: phase?.startDate ?? '',
+          endDate: phase?.endDate ?? '',
+        }}
+      >
+        <Form.Item name="code" label="Mã giai đoạn" rules={[{ required: true, message: 'Bắt buộc' }]}>
+          <Input placeholder="VD: PHASE-1" maxLength={50} disabled={!!phase} />
+        </Form.Item>
+        <Form.Item name="name" label="Tên giai đoạn" rules={[{ required: true, message: 'Bắt buộc' }]}>
+          <Input placeholder="VD: Khởi tạo" maxLength={100} />
+        </Form.Item>
+        <Form.Item name="sortOrder" label="Thứ tự" rules={[{ type: 'number', min: 0, message: 'Phải >= 0' }]}>
+          <Input type="number" />
+        </Form.Item>
+        <Form.Item name="startDate" label="Ngày bắt đầu">
+          <Input type="date" />
+        </Form.Item>
+        <Form.Item name="endDate" label="Ngày kết thúc">
+          <Input type="date" />
+        </Form.Item>
+      </Form>
+    </Modal>
+  );
+}
+
+function DocumentStatusFormModal({
+  status,
+  loading,
+  onCancel,
+  onSubmit,
+}: {
+  status: { id: number; code: string; label: string; color?: string; sortOrder?: number; isActive?: boolean; isSystem?: boolean } | null;
+  loading: boolean;
+  onCancel: () => void;
+  onSubmit: (values: DocumentStatusFormValues) => void;
+}) {
+  const [form] = Form.useForm<DocumentStatusFormValues>();
+  const handleOk = () => form.validateFields().then(onSubmit).catch(() => undefined);
+
+  return (
+    <Modal
+      title={status ? `Sửa trạng thái - ${status.label}` : 'Thêm trạng thái tài liệu'}
+      open
+      onCancel={onCancel}
+      onOk={handleOk}
+      okText="Lưu"
+      cancelText="Hủy"
+      confirmLoading={loading}
+      destroyOnHidden
+    >
+      <Form
+        form={form}
+        layout="vertical"
+        preserve={false}
+        initialValues={{
+          label: status?.label,
+          color: status?.color ?? '#1677ff',
+          sortOrder: status?.sortOrder ?? 0,
+          isActive: status?.isActive ?? true,
+        }}
+      >
+        <Form.Item name="label" label="Tên trạng thái" rules={[{ required: true, message: 'Bắt buộc' }]}>
+          <Input placeholder="VD: Đang kiểm tra" maxLength={50} />
+        </Form.Item>
+        <Form.Item name="color" label="Màu sắc">
+          <Input type="color" />
+        </Form.Item>
+        <Form.Item name="sortOrder" label="Thứ tự" rules={[{ type: 'number', min: 0, message: 'Phải >= 0' }]}>
+          <Input type="number" />
+        </Form.Item>
+        <Form.Item name="isActive" label="Kích hoạt" valuePropName="checked">
+          <Switch checkedChildren="Có" unCheckedChildren="Tắt" />
+        </Form.Item>
+      </Form>
+    </Modal>
+  );
+}
+
 type AdminSection = 'all' | 'users' | 'functions' | 'settings';
 
 /** Nhóm permissions theo module (dashboard, master_plan, document, ...) để render ma trận. */
@@ -131,11 +298,8 @@ export default function AdminPage({ section = 'all' }: { section?: AdminSection 
   const [roleModal, setRoleModal] = useState<{ role: RoleRow | null } | null>(null);
   const [roleForm] = Form.useForm<{ code: string; name: string; description?: string; permissions: string[] }>();
   const [departmentModal, setDepartmentModal] = useState<{ department: { id: number; code: string; name: string; description?: string; isActive?: boolean } | null } | null>(null);
-  const [departmentForm] = Form.useForm<{ code: string; name: string; description?: string; isActive: boolean }>();
   const [phaseModal, setPhaseModal] = useState<{ phase: { id: number; code: string; name: string; sortOrder?: number; startDate?: string; endDate?: string } | null } | null>(null);
-  const [phaseForm] = Form.useForm<{ code: string; name: string; sortOrder?: number; startDate?: string; endDate?: string }>();
   const [docStatusModal, setDocStatusModal] = useState<{ status: { id: number; code: string; label: string; color?: string; sortOrder?: number; isActive?: boolean; isSystem?: boolean } | null } | null>(null);
-  const [docStatusForm] = Form.useForm<{ label: string; color?: string; sortOrder?: number; isActive: boolean }>();
 
   // ---------- Import CSV (Master Plan ISO / Document Control) ----------
   const people = lookups?.people ?? [];
@@ -242,7 +406,7 @@ export default function AdminPage({ section = 'all' }: { section?: AdminSection 
       );
     });
 
-  // ---------- Tích hợp AI (Gemini/GPT/Claude) – cấu hình key ở trang Quản trị ----------
+  // ---------- Tích hợp AI (Gemini/GPT) – cấu hình key ở trang Quản trị ----------
   const [aiForm] = Form.useForm<AiSettings>();
   const [aiSaved, setAiSaved] = useState<AiSettings>(() => loadAiSettings());
   const [aiTesting, setAiTesting] = useState(false);
@@ -418,27 +582,25 @@ export default function AdminPage({ section = 'all' }: { section?: AdminSection 
     setDepartmentModal({ department: dept });
   };
 
-  const submitDepartment = () => {
-    departmentForm.validateFields().then((v) => {
-      const payload = { code: v.code, name: v.name, description: v.description, isActive: v.isActive ?? true };
-      if (departmentModal?.department) {
-        departmentUpdater.mutate({ id: departmentModal.department.id, patch: payload }, {
-          onSuccess: () => {
-            message.success(`Đã cập nhật phòng ban ${v.code}`);
-            setDepartmentModal(null);
-          },
-          onError: (e) => onErr(e, 'Cập nhật phòng ban thất bại'),
-        });
-      } else {
-        departmentCreator.mutate(payload, {
-          onSuccess: () => {
-            message.success(`Đã tạo phòng ban ${v.code}`);
-            setDepartmentModal(null);
-          },
-          onError: (e) => onErr(e, 'Tạo phòng ban thất bại'),
-        });
-      }
-    }).catch(() => undefined);
+  const submitDepartment = (v: DepartmentFormValues) => {
+    const payload = { code: v.code, name: v.name, description: v.description, isActive: v.isActive ?? true };
+    if (departmentModal?.department) {
+      departmentUpdater.mutate({ id: departmentModal.department.id, patch: payload }, {
+        onSuccess: () => {
+          message.success(`Đã cập nhật phòng ban ${v.code}`);
+          setDepartmentModal(null);
+        },
+        onError: (e) => onErr(e, 'Cập nhật phòng ban thất bại'),
+      });
+    } else {
+      departmentCreator.mutate(payload, {
+        onSuccess: () => {
+          message.success(`Đã tạo phòng ban ${v.code}`);
+          setDepartmentModal(null);
+        },
+        onError: (e) => onErr(e, 'Tạo phòng ban thất bại'),
+      });
+    }
   };
 
   const removeDepartment = (dept: { id: number; name: string }) => {
@@ -456,27 +618,25 @@ export default function AdminPage({ section = 'all' }: { section?: AdminSection 
     setPhaseModal({ phase });
   };
 
-  const submitPhase = () => {
-    phaseForm.validateFields().then((v) => {
-      const payload = { code: v.code, name: v.name, sortOrder: v.sortOrder ?? 0, startDate: v.startDate ?? '', endDate: v.endDate ?? '' };
-      if (phaseModal?.phase) {
-        phaseUpdater.mutate({ id: phaseModal.phase.id, patch: payload }, {
-          onSuccess: () => {
-            message.success(`Đã cập nhật giai đoạn ${v.code}`);
-            setPhaseModal(null);
-          },
-          onError: (e) => onErr(e, 'Cập nhật giai đoạn thất bại'),
-        });
-      } else {
-        phaseCreator.mutate(payload, {
-          onSuccess: () => {
-            message.success(`Đã tạo giai đoạn ${v.code}`);
-            setPhaseModal(null);
-          },
-          onError: (e) => onErr(e, 'Tạo giai đoạn thất bại'),
-        });
-      }
-    }).catch(() => undefined);
+  const submitPhase = (v: PhaseFormValues) => {
+    const payload = { code: v.code, name: v.name, sortOrder: v.sortOrder ?? 0, startDate: v.startDate ?? '', endDate: v.endDate ?? '' };
+    if (phaseModal?.phase) {
+      phaseUpdater.mutate({ id: phaseModal.phase.id, patch: payload }, {
+        onSuccess: () => {
+          message.success(`Đã cập nhật giai đoạn ${v.code}`);
+          setPhaseModal(null);
+        },
+        onError: (e) => onErr(e, 'Cập nhật giai đoạn thất bại'),
+      });
+    } else {
+      phaseCreator.mutate(payload, {
+        onSuccess: () => {
+          message.success(`Đã tạo giai đoạn ${v.code}`);
+          setPhaseModal(null);
+        },
+        onError: (e) => onErr(e, 'Tạo giai đoạn thất bại'),
+      });
+    }
   };
 
   const removePhase = (phase: { id: number; name: string }) => {
@@ -494,27 +654,25 @@ export default function AdminPage({ section = 'all' }: { section?: AdminSection 
     setDocStatusModal({ status });
   };
 
-  const submitDocStatus = () => {
-    docStatusForm.validateFields().then((v) => {
-      const payload = { label: v.label, color: v.color, sortOrder: v.sortOrder ?? 0, isActive: v.isActive ?? true };
-      if (docStatusModal?.status) {
-        docStatusUpdater.mutate({ id: docStatusModal.status.id, patch: payload }, {
-          onSuccess: () => {
-            message.success(`Đã cập nhật trạng thái ${docStatusModal.status!.label}`);
-            setDocStatusModal(null);
-          },
-          onError: (e) => onErr(e, 'Cập nhật trạng thái tài liệu thất bại'),
-        });
-      } else {
-        docStatusCreator.mutate({ code: (v.label || '').trim().replace(/\s+/g, '_').toLowerCase(), label: v.label, color: v.color, sortOrder: v.sortOrder ?? 0, isActive: v.isActive ?? true }, {
-          onSuccess: () => {
-            message.success(`Đã tạo trạng thái ${v.label}`);
-            setDocStatusModal(null);
-          },
-          onError: (e) => onErr(e, 'Tạo trạng thái tài liệu thất bại'),
-        });
-      }
-    }).catch(() => undefined);
+  const submitDocStatus = (v: DocumentStatusFormValues) => {
+    const payload = { label: v.label, color: v.color, sortOrder: v.sortOrder ?? 0, isActive: v.isActive ?? true };
+    if (docStatusModal?.status) {
+      docStatusUpdater.mutate({ id: docStatusModal.status.id, patch: payload }, {
+        onSuccess: () => {
+          message.success(`Đã cập nhật trạng thái ${docStatusModal.status!.label}`);
+          setDocStatusModal(null);
+        },
+        onError: (e) => onErr(e, 'Cập nhật trạng thái tài liệu thất bại'),
+      });
+    } else {
+      docStatusCreator.mutate({ code: (v.label || '').trim().replace(/\s+/g, '_').toLowerCase(), label: v.label, color: v.color, sortOrder: v.sortOrder ?? 0, isActive: v.isActive ?? true }, {
+        onSuccess: () => {
+          message.success(`Đã tạo trạng thái ${v.label}`);
+          setDocStatusModal(null);
+        },
+        onError: (e) => onErr(e, 'Tạo trạng thái tài liệu thất bại'),
+      });
+    }
   };
 
   const removeDocStatus = (status: { id: number; label: string }) => {
@@ -824,7 +982,7 @@ export default function AdminPage({ section = 'all' }: { section?: AdminSection 
                     showIcon
                     style={{ marginBottom: 16 }}
                     message="Phân tích & báo cáo nhanh Dashboard bằng AI"
-                    description="Nhập API key của Gemini / OpenAI(GPT) / Claude. Key được lưu cục bộ trên trình duyệt (demo). Với production, nên proxy qua backend để không lộ key."
+                    description="Chọn OpenAI (GPT) hoặc Google Gemini và nhập API key tương ứng. Key được lưu cục bộ trên trình duyệt (demo). Với production, nên proxy qua backend để không lộ key."
                   />
                   {!canManageAi ? (
                     <Alert type="warning" showIcon message="Bạn cần quyền quản trị vai trò (role.manage) để cấu hình AI." />
@@ -1065,120 +1223,33 @@ export default function AdminPage({ section = 'all' }: { section?: AdminSection 
         </Form>
       </Modal>
 
-      <Modal
-        title={departmentModal?.department ? `Sửa phòng ban - ${departmentModal.department.name}` : 'Thêm phòng ban'}
-        open={!!departmentModal}
-        onCancel={() => setDepartmentModal(null)}
-        onOk={submitDepartment}
-        okText="Lưu"
-        cancelText="Hủy"
-        confirmLoading={departmentCreator.isPending || departmentUpdater.isPending}
-        destroyOnHidden
-      >
-        <Form
-          key={departmentModal?.department?.id ?? 'new-department'}
-          form={departmentForm}
-          layout="vertical"
-          preserve={false}
-          initialValues={{
-            code: departmentModal?.department?.code,
-            name: departmentModal?.department?.name,
-            description: departmentModal?.department?.description ?? '',
-            isActive: departmentModal?.department?.isActive ?? true,
-          }}
-        >
-          <Form.Item name="code" label="Mã phòng ban" rules={[{ required: true, message: 'Bắt buộc' }]}>
-            <Input placeholder="VD: HR" maxLength={20} disabled={!!departmentModal?.department} />
-          </Form.Item>
-          <Form.Item name="name" label="Tên phòng ban" rules={[{ required: true, message: 'Bắt buộc' }]}>
-            <Input placeholder="VD: Nhân sự" maxLength={100} />
-          </Form.Item>
-          <Form.Item name="description" label="Mô tả">
-            <Input.TextArea rows={3} placeholder="Mô tả ngắn ..." />
-          </Form.Item>
-          <Form.Item name="isActive" label="Hoạt động" valuePropName="checked">
-            <Switch checkedChildren="Có" unCheckedChildren="Tắt" />
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      <Modal
-        title={phaseModal?.phase ? `Sửa giai đoạn - ${phaseModal.phase.name}` : 'Thêm giai đoạn mới'}
-        open={!!phaseModal}
-        onCancel={() => setPhaseModal(null)}
-        onOk={submitPhase}
-        okText="Lưu"
-        cancelText="Hủy"
-        confirmLoading={phaseCreator.isPending || phaseUpdater.isPending}
-        destroyOnHidden
-      >
-        <Form
-          key={phaseModal?.phase?.id ?? 'new-phase'}
-          form={phaseForm}
-          layout="vertical"
-          preserve={false}
-          initialValues={{
-            code: phaseModal?.phase?.code,
-            name: phaseModal?.phase?.name,
-            sortOrder: phaseModal?.phase?.sortOrder ?? 0,
-            startDate: phaseModal?.phase?.startDate ?? '',
-            endDate: phaseModal?.phase?.endDate ?? '',
-          }}
-        >
-          <Form.Item name="code" label="Mã giai đoạn" rules={[{ required: true, message: 'Bắt buộc' }]}>
-            <Input placeholder="VD: PHASE-1" maxLength={50} disabled={!!phaseModal?.phase} />
-          </Form.Item>
-          <Form.Item name="name" label="Tên giai đoạn" rules={[{ required: true, message: 'Bắt buộc' }]}>
-            <Input placeholder="VD: Khởi tạo" maxLength={100} />
-          </Form.Item>
-          <Form.Item name="sortOrder" label="Thứ tự" rules={[{ type: 'number', min: 0, message: 'Phải >= 0' }]}>
-            <Input type="number" />
-          </Form.Item>
-          <Form.Item name="startDate" label="Ngày bắt đầu">
-            <Input type="date" />
-          </Form.Item>
-          <Form.Item name="endDate" label="Ngày kết thúc">
-            <Input type="date" />
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      <Modal
-        title={docStatusModal?.status ? `Sửa trạng thái - ${docStatusModal.status.label}` : 'Thêm trạng thái tài liệu'}
-        open={!!docStatusModal}
-        onCancel={() => setDocStatusModal(null)}
-        onOk={submitDocStatus}
-        okText="Lưu"
-        cancelText="Hủy"
-        confirmLoading={docStatusCreator.isPending || docStatusUpdater.isPending}
-        destroyOnHidden
-      >
-        <Form
-          key={docStatusModal?.status?.id ?? 'new-document-status'}
-          form={docStatusForm}
-          layout="vertical"
-          preserve={false}
-          initialValues={{
-            label: docStatusModal?.status?.label,
-            color: docStatusModal?.status?.color ?? '#1677ff',
-            sortOrder: docStatusModal?.status?.sortOrder ?? 0,
-            isActive: docStatusModal?.status?.isActive ?? true,
-          }}
-        >
-          <Form.Item name="label" label="Tên trạng thái" rules={[{ required: true, message: 'Bắt buộc' }]}>
-            <Input placeholder="VD: Đang kiểm tra" maxLength={50} />
-          </Form.Item>
-          <Form.Item name="color" label="Màu sắc">
-            <Input type="color" />
-          </Form.Item>
-          <Form.Item name="sortOrder" label="Thứ tự" rules={[{ type: 'number', min: 0, message: 'Phải >= 0' }]}>
-            <Input type="number" />
-          </Form.Item>
-          <Form.Item name="isActive" label="Kích hoạt" valuePropName="checked">
-            <Switch checkedChildren="Có" unCheckedChildren="Tắt" />
-          </Form.Item>
-        </Form>
-      </Modal>
+      {departmentModal && (
+        <DepartmentFormModal
+          key={departmentModal.department?.id ?? 'new-department'}
+          department={departmentModal.department}
+          loading={departmentCreator.isPending || departmentUpdater.isPending}
+          onCancel={() => setDepartmentModal(null)}
+          onSubmit={submitDepartment}
+        />
+      )}
+      {phaseModal && (
+        <PhaseFormModal
+          key={phaseModal.phase?.id ?? 'new-phase'}
+          phase={phaseModal.phase}
+          loading={phaseCreator.isPending || phaseUpdater.isPending}
+          onCancel={() => setPhaseModal(null)}
+          onSubmit={submitPhase}
+        />
+      )}
+      {docStatusModal && (
+        <DocumentStatusFormModal
+          key={docStatusModal.status?.id ?? 'new-document-status'}
+          status={docStatusModal.status}
+          loading={docStatusCreator.isPending || docStatusUpdater.isPending}
+          onCancel={() => setDocStatusModal(null)}
+          onSubmit={submitDocStatus}
+        />
+      )}
     </div>
   );
 }
