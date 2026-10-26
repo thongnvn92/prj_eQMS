@@ -1,11 +1,25 @@
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  background: #f5f6fa;
+  background: var(--eqms-page-background, #f5f6fa);
 }
 
 #root {
   min-height: 100vh;
+}
+
+.eqms-app-shell,
+.eqms-app-shell > .ant-layout {
+  background: var(--eqms-page-background, #f5f6fa);
+}
+
+html[data-theme='light'] {
+  --eqms-page-background: #f5f6fa;
+}
+
+html[data-theme='dark'] {
+  --eqms-page-background: #141414;
+  color-scheme: dark;
 }
 
 .eqms-page {
@@ -60,6 +74,16 @@ body {
   background: #fff;
   line-height: 1.7;
 }
+
+html[data-theme='dark'] .ai-markdown-view {
+  color: rgba(255, 255, 255, 0.85);
+  background: #1f1f1f;
+  border-color: #424242;
+}
+html[data-theme='dark'] .ai-markdown-view th { background: #262626; }
+html[data-theme='dark'] .ai-markdown-view th,
+html[data-theme='dark'] .ai-markdown-view td { border-color: #434343; }
+html[data-theme='dark'] .ai-markdown-view pre { background: #262626; }
 .ai-markdown-view h1,
 .ai-markdown-view h2,
 .ai-markdown-view h3,

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Avatar, Dropdown, Layout, Menu, Space, Tag, Typography } from 'antd';
 import {
+  BulbOutlined,
   CarryOutOutlined,
   DashboardOutlined,
   FileTextOutlined,
@@ -11,10 +12,12 @@ import {
   UserOutlined,
   WarningOutlined,
   RobotOutlined,
+  MoonOutlined,
 } from '@ant-design/icons';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import type { Permission } from '../auth/permissions';
+import { useColorMode } from '../theme/ThemeContext';
 
 const { Header, Sider, Content } = Layout;
 
@@ -51,6 +54,7 @@ const NAV: NavItem[] = [
 
 export default function AppLayout() {
   const { user, logout, can } = useAuth();
+  const { colorMode, toggleColorMode } = useColorMode();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -73,7 +77,7 @@ export default function AppLayout() {
       .sort((a, b) => b.length - a.length)[0] ?? '/';
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <Layout className="eqms-app-shell" style={{ minHeight: '100vh' }}>
       <Header
         style={{
           display: 'flex',
@@ -100,6 +104,13 @@ export default function AppLayout() {
           <Dropdown
             menu={{
               items: [
+                {
+                  key: 'color-mode',
+                  icon: colorMode === 'light' ? <MoonOutlined /> : <BulbOutlined />,
+                  label: colorMode === 'light' ? 'Giao diện tối' : 'Giao diện sáng',
+                  onClick: toggleColorMode,
+                },
+                { type: 'divider' },
                 {
                   key: 'logout',
                   icon: <LogoutOutlined />,
