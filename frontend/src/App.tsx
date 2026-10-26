@@ -10,6 +10,9 @@ import GanttPage from './pages/GanttPage';
 import DocumentsPage from './pages/DocumentsPage';
 import ActionsPage from './pages/ActionsPage';
 import AdminPage from './pages/AdminPage';
+import AdminUsersPage from './pages/AdminUsersPage';
+import AdminFunctionsPage from './pages/AdminFunctionsPage';
+import AdminSettingsPage from './pages/AdminSettingsPage';
 import RisksPage from './pages/RisksPage';
 import OpportunitiesPage from './pages/OpportunitiesPage';
 
@@ -88,6 +91,30 @@ export default function App() {
               element={
                 <PermissionRoute permission="user.view">
                   <AdminPage />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="admin/users"
+              element={
+                <PermissionRoute permission="user.view">
+                  <AdminUsersPage />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="admin/functions"
+              element={
+                <PermissionRoute permission="user.view">
+                  <AdminFunctionsPage />
+                </PermissionRoute>
+              }
+            />
+            <Route
+              path="admin/settings"
+              element={
+                <PermissionRoute permission="user.view">
+                  <AdminSettingsPage />
                 </PermissionRoute>
               }
             />

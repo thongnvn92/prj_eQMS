@@ -13,7 +13,9 @@ use Tests\TestCase;
  * - Người phụ trách task (owner, chỉ có master_plan.view) cập nhật tiến độ CỦA MÌNH → 200.
  * - Không phải owner & không có master_plan.update → 403.
  * - Người có master_plan.update (deputy) cập nhật task của người khác → 200.
- * - Validate progress 0..100 → 422; task completed ⇒ ép progress = 100 (bất biến hiện có).
+ * - Validate progress 0..100 → 422; trạng thái tự suy ra theo tiến độ:
+ *   0 → not_started, 1..99 → in_progress, 100 → completed, quá deadline → delayed;
+ *   blocked/cancelled giữ nguyên (trạng thái thủ công).
  * - Chưa đăng nhập → 401; thiếu master_plan.view (route middleware) → 403; id không tồn tại → 404.
  *
  * Không dùng RefreshDatabase: mỗi test bọc transaction + rollback (giống EndpointWorkflowTest)
@@ -149,18 +151,58 @@ class MasterPlanProgressTest extends TestCase
         });
     }
 
-    public function test_completed_task_forces_progress_100(): void
+    public function test_progress_100_derives_completed_and_back_to_in_progress(): void
     {
         $this->tx(function () {
-            $task = $this->makeTask($this->userId('manager'), 'completed', 100);
+            $task = $this->makeTask($this->userId('manager'), 'in_progress', 10);
             $headers = $this->authAs('manager', 'Manager123!');
 
-            $response = $this->withHeaders($headers)->patchJson("/api/master-plan/tasks/{$task->id}/progress", [
-                'progress' => 50,
-            ]);
+            // 100% ⇒ Hoàn thành.
+            $this->withHeaders($headers)->patchJson("/api/master-plan/tasks/{$task->id}/progress", [
+                'progress' => 100,
+            ])->assertOk()->assertJsonPath('progress', 100)->assertJsonPath('status', 'completed');
 
-            $response->assertOk();
-            $response->assertJsonPath('progress', 100);
+            // Hạ lại 50% ⇒ Đang thực hiện (completed chỉ còn khi progress=100).
+            $this->withHeaders($headers)->patchJson("/api/master-plan/tasks/{$task->id}/progress", [
+                'progress' => 50,
+            ])->assertOk()->assertJsonPath('progress', 50)->assertJsonPath('status', 'in_progress');
+        });
+    }
+
+    public function test_progress_zero_on_future_deadline_derives_not_started(): void
+    {
+        $this->tx(function () {
+            $task = $this->makeTask($this->userId('manager'), 'in_progress', 45); // due 2026-12-31 (chưa quá hạn)
+            $headers = $this->authAs('manager', 'Manager123!');
+
+            $this->withHeaders($headers)->patchJson("/api/master-plan/tasks/{$task->id}/progress", [
+                'progress' => 0,
+            ])->assertOk()->assertJsonPath('status', 'not_started');
+        });
+    }
+
+    public function test_progress_on_overdue_task_derives_delayed(): void
+    {
+        $this->tx(function () {
+            $task = $this->makeTask($this->userId('manager'), 'not_started', 0);
+            $task->update(['due_date' => now()->subDay()->format('Y-m-d')]);
+            $headers = $this->authAs('manager', 'Manager123!');
+
+            $this->withHeaders($headers)->patchJson("/api/master-plan/tasks/{$task->id}/progress", [
+                'progress' => 20,
+            ])->assertOk()->assertJsonPath('status', 'delayed');
+        });
+    }
+
+    public function test_blocked_status_is_preserved_on_progress_update(): void
+    {
+        $this->tx(function () {
+            $task = $this->makeTask($this->userId('manager'), 'blocked', 10);
+            $headers = $this->authAs('manager', 'Manager123!');
+
+            $this->withHeaders($headers)->patchJson("/api/master-plan/tasks/{$task->id}/progress", [
+                'progress' => 30,
+            ])->assertOk()->assertJsonPath('status', 'blocked');
         });
     }
 

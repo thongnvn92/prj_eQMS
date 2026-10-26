@@ -50,6 +50,48 @@ class MasterPlanService
         }
     }
 
+    /**
+     * Tiến độ → trạng thái suy ra (quy tắc CR Master Plan ISO):
+     * - progress = 100 → completed (Hoàn thành)
+     * - quá deadline (dueDate < hôm nay) và chưa hoàn thành → delayed (Trễ hạn)
+     * - progress = 0 → not_started (Chưa thực hiện)
+     * - còn lại (1..99) → in_progress (Đang thực hiện)
+     *
+     * Trạng thái do người dùng set tay chỉ giữ được với blocked/cancelled;
+     * các trạng thái dẫn tiến độ được chuẩn hóa theo quy tắc trên.
+     */
+    public function deriveTaskStatus(int $progress, ?string $dueDate): string
+    {
+        if ($progress >= 100) {
+            return 'completed';
+        }
+
+        $today = now()->format('Y-m-d');
+        if ($dueDate && $dueDate < $today) {
+            return 'delayed';
+        }
+
+        if ($progress <= 0) {
+            return 'not_started';
+        }
+
+        return 'in_progress';
+    }
+
+    /**
+     * Chuẩn hóa status sau khi biết progress + dueDate cuối cùng.
+     * - blocked/cancelled: giữ nguyên (trạng thái thủ công).
+     * - còn lại: suy ra từ tiến độ / deadline (xem deriveTaskStatus).
+     */
+    public function normalizeTaskStatus(?string $requested, int $progress, ?string $dueDate): string
+    {
+        if (in_array($requested, ['blocked', 'cancelled'], true)) {
+            return $requested;
+        }
+
+        return $this->deriveTaskStatus($progress, $dueDate);
+    }
+
     public function reorder(int $planId, array $orderedIds): void
     {
         $tasks = MasterPlanTask::where('master_plan_id', $planId)

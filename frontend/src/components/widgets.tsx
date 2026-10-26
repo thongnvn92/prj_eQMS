@@ -32,7 +32,9 @@ export const PRIORITY: Record<string, Meta> = {
 };
 
 export const DOC_STATUS: Record<string, Meta> = {
-  draft: { label: 'Bản nháp', color: 'default', hex: '#8c8c8c' },
+  planned: { label: 'Chưa dự thảo', color: 'default', hex: '#8c8c8c' },
+  draft: { label: 'Bản nháp (soạn thảo)', color: 'default', hex: '#595959' },
+  review_pending: { label: 'Chờ thẩm định', color: 'gold', hex: '#d4b106' },
   reviewing: { label: 'Đang thẩm định', color: 'processing', hex: '#1677ff' },
   approval_pending: { label: 'Chờ phê duyệt', color: 'gold', hex: '#faad14' },
   approved: { label: 'Đã phê duyệt', color: 'blue', hex: '#2f54eb' },

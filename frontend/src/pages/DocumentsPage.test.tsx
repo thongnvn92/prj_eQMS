@@ -107,7 +107,7 @@ function renderPage(docs: DocumentItem[]) {
     },
     preloadedState: {
       // status='succeeded' → hooks không dispatch fetch khi mount.
-      lookups: { people: [], departments: [], phases: [], status: 'succeeded' as const },
+      lookups: { people: [], departments: [], phases: [], documentStatuses: [], status: 'succeeded' as const },
       documents: {
         items: docs,
         status: 'succeeded' as const,

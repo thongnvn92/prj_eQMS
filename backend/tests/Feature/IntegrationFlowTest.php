@@ -101,19 +101,19 @@ class IntegrationFlowTest extends TestCase
             $this->assertNotEmpty($docs->json());
             $this->assertSame('draft', collect($docs->json())->firstWhere('id', 2)['status'] ?? null);
 
-            // ---- 8. TRANSITION: submit doc 2 draft → reviewing (deputy có document.submit) ----
+            // ---- 8. TRANSITION: submit doc 2 draft → review_pending (deputy có document.submit) ----
             $transition = $this->withHeaders($headers)->postJson('/api/documents/2/transition', [
                 'action' => 'submit',
             ]);
             $transition->assertOk();
-            $transition->assertJsonPath('status', 'reviewing');
+            $transition->assertJsonPath('status', 'review_pending');
             $transition->assertJsonPath('code', 'QT-HCNS.02');
 
             // Transition ghi approvals + activity_log.
             $this->assertDatabaseHas('document_approvals', [
                 'document_id' => 2,
                 'action' => 'submit',
-                'step' => 'reviewing',
+                'step' => 'review_pending',
             ]);
 
             // ---- 9. RBAC vẫn chặn trong cùng phiên: /admin/users với deputy → 403 ----

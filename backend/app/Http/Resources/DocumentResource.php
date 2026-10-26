@@ -23,6 +23,7 @@ class DocumentResource extends JsonResource
             'docType' => $this->doc_type,
             'departmentId' => $this->department_id,
             'ownerId' => $this->owner_id,
+            'ownerName' => $this->owner_name,
             'currentVersion' => $this->current_version,
             'status' => $this->status,
             'statusUpdatedAt' => $this->status_updated_at?->toIso8601String(),

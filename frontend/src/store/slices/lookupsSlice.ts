@@ -1,12 +1,13 @@
 // Lookups (people, departments, phases) – nạp 1 lần, không refetch
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import type { Department, Phase } from '../../mock/types';
+import type { Department, DocumentStatusItem, Phase } from '../../mock/types';
 import { api } from '../../services/api';
 
 interface LookupsState {
   people: { id: number; fullName: string }[];
   departments: Department[];
   phases: Phase[];
+  documentStatuses: DocumentStatusItem[];
   status: 'idle' | 'loading' | 'succeeded' | 'failed';
   error?: string;
 }
@@ -15,6 +16,7 @@ const initialState: LookupsState = {
   people: [],
   departments: [],
   phases: [],
+  documentStatuses: [],
   status: 'idle',
 };
 
@@ -33,6 +35,7 @@ const lookupsSlice = createSlice({
         state.people = action.payload.people;
         state.departments = action.payload.departments;
         state.phases = action.payload.phases;
+        state.documentStatuses = action.payload.documentStatuses;
         state.status = 'succeeded';
       })
       .addCase(fetchLookups.rejected, (state, action) => {

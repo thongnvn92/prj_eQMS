@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class MasterPlanTask extends BaseModel
 {
     protected $fillable = [
-        'phase_id', 'parent_id', 'sort_order', 'code', 'name', 'owner_id', 'department_id', 'priority', 'status',
+        'phase_id', 'parent_id', 'sort_order', 'code', 'name', 'owner_id', 'owner_name', 'department_id', 'priority', 'status',
         'progress', 'start_date', 'due_date', 'result', 'note', 'dependency_id', 'risk_level',
         'year', 'quarter', 'month',
         'is_milestone',

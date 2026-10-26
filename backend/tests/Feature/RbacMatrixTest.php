@@ -190,7 +190,7 @@ class RbacMatrixTest extends TestCase
                 'description' => 'Tạo bởi test Ban ISO',
             ])
                 ->assertStatus(201)
-                ->assertJsonPath('status', 'draft')
+                ->assertJsonPath('status', 'planned')
                 ->assertJsonPath('currentVersion', 'V0.1');
         });
     }

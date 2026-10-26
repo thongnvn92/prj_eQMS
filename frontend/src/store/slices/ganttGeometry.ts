@@ -178,7 +178,8 @@ export type TaskFormValues = {
   name: string;
   phaseId: number;
   parentId?: number | null;
-  ownerId?: number | null;
+  ownerId?: string | number | null;
+  ownerName?: string | null;
   departmentId?: number | null;
   priority: Priority;
   startDate: string;

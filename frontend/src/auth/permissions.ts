@@ -43,6 +43,8 @@ export const PERMISSIONS = [
   'role.view',
   'role.manage',
   'department.view',
+  'department.manage',
+  'document_status.manage',
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -85,6 +87,7 @@ export const ROLE_PERMISSIONS: Record<RoleCode, Permission[]> = {
     'risk.view', 'risk.create', 'risk.update', 'risk.evaluate', 'risk.close', 'risk.delete',
     'opportunity.view', 'opportunity.create', 'opportunity.update', 'opportunity.evaluate', 'opportunity.close', 'opportunity.delete',
     'department.view',
+    'document_status.manage',
   ],
   iso_deputy: [
     'dashboard.view',

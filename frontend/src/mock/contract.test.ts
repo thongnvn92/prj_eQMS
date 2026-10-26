@@ -47,7 +47,7 @@ describe('API contract – type-level (mock/types.ts)', () => {
       'not_started' | 'in_progress' | 'blocked' | 'delayed' | 'completed' | 'cancelled'
     >();
     expectTypeOf<DocumentItem['status']>().toEqualTypeOf<
-      'draft' | 'reviewing' | 'approval_pending' | 'approved' | 'published' | 'obsolete' | 'archived'
+      'planned' | 'draft' | 'review_pending' | 'reviewing' | 'approval_pending' | 'approved' | 'published' | 'obsolete' | 'archived'
     >();
     expectTypeOf<ActionItem['status']>().toEqualTypeOf<
       'open' | 'in_progress' | 'blocked' | 'overdue' | 'pending_verification' | 'verified' | 'closed'

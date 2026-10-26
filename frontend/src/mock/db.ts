@@ -21,6 +21,8 @@ export function getDb(): MockDb {
         parsed.opportunities = fresh.opportunities;
         parsed.riskAssessments = fresh.riskAssessments;
       }
+      // DB cũ (trước khi có master-data trạng thái tài liệu tùy chỉnh) → bổ sung mảng.
+      if (!Array.isArray(parsed.documentsStatuses)) parsed.documentsStatuses = [];
       cache = parsed;
       return cache;
     }

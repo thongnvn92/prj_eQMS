@@ -19,6 +19,7 @@ export interface VisibleRow {
   name: string;
   phaseId: number;
   ownerId: number | null;
+  ownerName?: string | null;
   departmentId: number | null;
   priority: Priority;
   status: TaskStatus;
@@ -116,6 +117,7 @@ export function flattenVisibleTree(
       name: task.name,
       phaseId: task.phaseId,
       ownerId: task.ownerId ?? null,
+      ownerName: task.ownerName ?? undefined,
       departmentId: task.departmentId ?? null,
       priority: task.priority,
       status: task.status,

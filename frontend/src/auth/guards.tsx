@@ -11,8 +11,9 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', minHeight: '60vh', alignItems: 'center', justifyContent: 'center' }}>
-        <Spin size="large" tip="Đang tải phiên làm việc..." />
+      <div style={{ display: 'flex', minHeight: '60vh', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12 }}>
+        <Spin size="large" />
+        <span>Đang tải phiên làm việc...</span>
       </div>
     );
   }

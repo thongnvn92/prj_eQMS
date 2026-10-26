@@ -13,6 +13,7 @@ import type {
   DocAction,
   DocApproval,
   DocumentFile,
+  DocumentStatusItem,
   DocumentItem,
   MasterPlan,
   OpportunityItem,
@@ -31,6 +32,18 @@ import type {
   TaskStatus,
   User,
 } from './types';
+
+export const STANDARD_DOC_STATUSES: DocumentStatusItem[] = [
+  { id: 1, code: 'planned', label: 'Chưa dự thảo', color: '#8c8c8c', sortOrder: 10, isActive: true, isSystem: true },
+  { id: 2, code: 'draft', label: 'Bản nháp (soạn thảo)', color: '#595959', sortOrder: 20, isActive: true, isSystem: true },
+  { id: 3, code: 'review_pending', label: 'Chờ thẩm định', color: '#d4b106', sortOrder: 30, isActive: true, isSystem: true },
+  { id: 4, code: 'reviewing', label: 'Đang thẩm định', color: '#1677ff', sortOrder: 40, isActive: true, isSystem: true },
+  { id: 5, code: 'approval_pending', label: 'Chờ phê duyệt', color: '#faad14', sortOrder: 50, isActive: true, isSystem: true },
+  { id: 6, code: 'approved', label: 'Đã phê duyệt', color: '#2f54eb', sortOrder: 60, isActive: true, isSystem: true },
+  { id: 7, code: 'published', label: 'Đã ban hành', color: '#52c41a', sortOrder: 70, isActive: true, isSystem: true },
+  { id: 8, code: 'obsolete', label: 'Lỗi thời', color: '#fa8c16', sortOrder: 80, isActive: true, isSystem: true },
+  { id: 9, code: 'archived', label: 'Lưu trữ', color: '#bfbfbf', sortOrder: 90, isActive: true, isSystem: true },
+];
 
 export class ApiError extends Error {
   status: number;
@@ -176,6 +189,7 @@ export const mockApi = {
     people: { id: number; fullName: string }[];
     departments: Department[];
     phases: Phase[];
+    documentStatuses: DocumentStatusItem[];
   }> {
     authorize(token);
     await delay(80);
@@ -184,6 +198,10 @@ export const mockApi = {
       people: db.users.map((u) => ({ id: u.id, fullName: u.fullName })),
       departments: [...db.departments],
       phases: [...db.phases],
+      documentStatuses: [
+        ...STANDARD_DOC_STATUSES.filter((s) => s.isSystem),
+        ...(db.documentsStatuses ?? []).filter((s) => !s.isSystem),
+      ],
     };
   },
 
@@ -198,13 +216,14 @@ export const mockApi = {
   async updateTask(
     token: string | null,
     id: number,
-    patch: { status?: TaskStatus; progress?: number; ownerId?: number; note?: string },
+    patch: { status?: TaskStatus; progress?: number; ownerId?: number | null; ownerName?: string | null; note?: string },
   ): Promise<Task> {
     const actor = authorize(token);
     await delay();
     const task = getDb().tasks.find((x) => x.id === id);
     if (!task) throw new ApiError(404, 'Không tìm thấy công việc.');
     if (patch.ownerId !== undefined) authorize(token, 'master_plan.assign');
+    if (patch.ownerName !== undefined) authorize(token, 'master_plan.assign');
     if (patch.status !== undefined || patch.progress !== undefined || patch.note !== undefined) {
       authorize(token, 'master_plan.update');
     }
@@ -212,6 +231,7 @@ export const mockApi = {
     if (patch.status !== undefined) task.status = patch.status;
     if (patch.progress !== undefined) task.progress = Math.max(0, Math.min(100, Math.round(patch.progress)));
     if (patch.ownerId !== undefined) task.ownerId = patch.ownerId;
+    if (patch.ownerName !== undefined) task.ownerName = patch.ownerName ?? undefined;
     if (patch.note !== undefined) task.note = patch.note;
     if (task.status === 'completed') task.progress = 100;
     if (oldStatus !== task.status) {
@@ -233,7 +253,7 @@ export const mockApi = {
     token: string | null,
     input: {
       code: string; name: string; docType: DocumentItem['docType'];
-      departmentId?: number | null; ownerId?: number | null;
+      departmentId?: number | null; ownerId?: number | null; ownerName?: string | null;
       relatedTaskId?: number | null; description?: string; changeSummary?: string;
       autoVersion?: boolean;
     },
@@ -253,6 +273,7 @@ export const mockApi = {
       docType: input.docType,
       departmentId: input.departmentId ?? actor.departmentId ?? 2,
       ownerId: input.ownerId ?? actor.id,
+      ownerName: input.ownerName ?? undefined,
       currentVersion: 'V0.1',
       status: 'draft',
       workflowStep: 1,
@@ -277,7 +298,7 @@ export const mockApi = {
     id: number,
     patch: {
       code?: string; name?: string; docType?: DocumentItem['docType'];
-      departmentId?: number | null; ownerId?: number | null;
+      departmentId?: number | null; ownerId?: number | null; ownerName?: string | null;
       relatedTaskId?: number | null; description?: string; changeSummary?: string;
       autoVersion?: boolean; version?: string;
     },
@@ -303,6 +324,7 @@ export const mockApi = {
     if (patch.docType !== undefined) doc.docType = patch.docType;
     if (patch.departmentId !== undefined && patch.departmentId !== null) doc.departmentId = patch.departmentId;
     if (patch.ownerId !== undefined && patch.ownerId !== null) doc.ownerId = patch.ownerId;
+    if (patch.ownerName !== undefined) doc.ownerName = patch.ownerName ?? undefined;
     if (patch.relatedTaskId !== undefined) doc.relatedTaskId = patch.relatedTaskId ?? undefined;
     if (patch.description !== undefined) doc.description = patch.description;
     if (patch.autoVersion !== undefined) doc.autoVersion = patch.autoVersion;
@@ -364,7 +386,9 @@ export const mockApi = {
     if (!doc) throw new ApiError(404, 'Không tìm thấy tài liệu.');
 
     const spec: Record<DocAction, { perm: Permission; from: string[]; to: DocumentItem['status'] }> = {
-      submit: { perm: 'document.submit', from: ['draft'], to: 'reviewing' },
+      start_draft: { perm: 'document.submit', from: ['planned'], to: 'draft' },
+      submit: { perm: 'document.submit', from: ['draft'], to: 'review_pending' },
+      start_review: { perm: 'document.review', from: ['review_pending'], to: 'reviewing' },
       review: { perm: 'document.review', from: ['reviewing'], to: 'approval_pending' },
       approve: { perm: 'document.approve', from: ['approval_pending'], to: 'approved' },
       reject: { perm: 'document.approve', from: ['reviewing', 'approval_pending'], to: 'draft' },
@@ -984,7 +1008,7 @@ export const mockApi = {
     token: string | null,
     input: {
       code: string; title: string; description?: string; source: ActionItem['source'];
-      departmentId?: number | null; ownerId?: number | null; issueDescription?: string;
+      departmentId?: number | null; ownerId?: number | null; ownerName?: string | null; issueDescription?: string;
       relatedDocumentId?: number | null; relatedTaskId?: number | null; dueDate: string;
       relatedRiskId?: number | null; relatedOpportunityId?: number | null;
     },
@@ -1081,7 +1105,7 @@ export const mockApi = {
     token: string | null,
     input: {
       phaseId: number; parentId?: number | null; code: string; name: string;
-      ownerId?: number | null; departmentId?: number | null; priority?: Task['priority'];
+      ownerId?: number | null; ownerName?: string | null; departmentId?: number | null; priority?: Task['priority'];
       startDate: string; dueDate: string; note?: string;
     },
   ): Promise<Task> {
@@ -1092,6 +1116,7 @@ export const mockApi = {
       id: nextId(db), code: input.code, name: input.name, phaseId: input.phaseId,
       parentId: input.parentId ?? null, sortOrder: 0,
       ownerId: input.ownerId ?? actor.id, departmentId: input.departmentId ?? actor.departmentId,
+      ownerName: input.ownerName ?? undefined,
       priority: input.priority ?? 'medium', status: 'not_started', progress: 0,
       startDate: input.startDate, dueDate: input.dueDate, note: input.note,
     };
@@ -1163,6 +1188,15 @@ export const mockApi = {
     authorize(token, 'user.view');
     await delay();
     return getDb().users.map(({ password: _password, ...safe }) => safe);
+  },
+
+  async getUser(token: string | null, id: number) {
+    authorize(token, 'user.view');
+    await delay();
+    const db = getDb();
+    const user = db.users.find((u) => u.id === id);
+    if (!user) throw new ApiError(404, 'Không tìm thấy người dùng.');
+    return { ...user };
   },
 
   async listRoles(token: string | null) {
@@ -1356,6 +1390,223 @@ export const mockApi = {
     await delay(150);
     resetDb();
   },
+
+  /** Admin master-data: Danh sách phòng ban. Quyền: department.view. */
+  async getDepartments(token: string | null): Promise<Department[]> {
+    authorize(token, 'department.view');
+    await delay();
+    return Promise.resolve([...getDb().departments]);
+  },
+
+  async createDepartment(
+    token: string | null,
+    input: { code: string; name: string; description?: string; isActive?: boolean },
+  ): Promise<Department> {
+    const actor = authorize(token, 'department.manage');
+    await delay();
+    const db = getDb();
+    if (db.departments.some((d) => d.code.toLowerCase() === input.code.trim().toLowerCase())) {
+      throw new ApiError(422, `Mã phòng ban "${input.code}" đã tồn tại.`);
+    }
+    if (!input.name.trim()) throw new ApiError(422, 'Tên phòng ban là bắt buộc.');
+    const dept: Department = {
+      id: nextId(db),
+      code: input.code.trim().toUpperCase(),
+      name: input.name.trim(),
+      description: input.description?.trim() || undefined,
+      isActive: input.isActive ?? true,
+    };
+    db.departments.push(dept);
+    writeLog(actor.id, 'create', 'department', dept.id);
+    persist(db);
+    return Promise.resolve(dept);
+  },
+
+  async updateDepartment(
+    token: string | null,
+    id: number,
+    patch: { code?: string; name?: string; description?: string; isActive?: boolean },
+  ): Promise<Department> {
+    const actor = authorize(token, 'department.manage');
+    await delay();
+    const db = getDb();
+    const idx = db.departments.findIndex((d) => d.id === id);
+    if (idx < 0) throw new ApiError(404, 'Không tìm thấy phòng ban.');
+    const current = db.departments[idx];
+    if (patch.code !== undefined) {
+      const code = patch.code.trim().toUpperCase();
+      if (db.departments.some((d) => d.id !== id && d.code === code)) {
+        throw new ApiError(422, `Mã phòng ban "${patch.code}" đã tồn tại.`);
+      }
+      current.code = code;
+    }
+    if (patch.name !== undefined) {
+      if (!patch.name.trim()) throw new ApiError(422, 'Tên phòng ban là bắt buộc.');
+      current.name = patch.name.trim();
+    }
+    if (patch.isActive !== undefined) current.isActive = patch.isActive;
+    writeLog(actor.id, 'update', 'department', id);
+    persist(db);
+    return Promise.resolve(current);
+  },
+
+  async deleteDepartment(token: string | null, id: number): Promise<{ status: string }> {
+    const actor = authorize(token, 'department.manage');
+    await delay();
+    const db = getDb();
+    const idx = db.departments.findIndex((d) => d.id === id);
+    if (idx < 0) throw new ApiError(404, 'Không tìm thấy phòng ban.');
+    db.departments.splice(idx, 1);
+    writeLog(actor.id, 'delete', 'department', id);
+    persist(db);
+    return Promise.resolve({ status: 'ok' });
+  },
+
+  /** Admin master-data: Danh sách Giai đoạn. Quyền: master_plan.view. */
+  async getPhases(token: string | null): Promise<Phase[]> {
+    authorize(token, 'master_plan.view');
+    await delay();
+    return Promise.resolve([...getDb().phases]);
+  },
+
+  async createPhase(
+    token: string | null,
+    input: { code: string; name: string; sortOrder?: number; startDate?: string; endDate?: string },
+  ): Promise<Phase> {
+    const actor = authorize(token, 'master_plan.create');
+    await delay();
+    const db = getDb();
+    if (!input.code.trim()) throw new ApiError(422, 'Mã giai đoạn là bắt buộc.');
+    if (!input.name.trim()) throw new ApiError(422, 'Tên giai đoạn là bắt buộc.');
+    const phase: Phase = {
+      id: nextId(db),
+      code: input.code.trim().toUpperCase(),
+      name: input.name.trim(),
+      sortOrder: input.sortOrder ?? 0,
+      startDate: input.startDate ?? '',
+      endDate: input.endDate ?? '',
+    };
+    db.phases.push(phase);
+    writeLog(actor.id, 'create', 'phase', phase.id);
+    persist(db);
+    return Promise.resolve(phase);
+  },
+
+  async updatePhase(
+    token: string | null,
+    id: number,
+    patch: { code?: string; name?: string; sortOrder?: number; startDate?: string; endDate?: string },
+  ): Promise<Phase> {
+    const actor = authorize(token, 'master_plan.update');
+    await delay();
+    const db = getDb();
+    const idx = db.phases.findIndex((p) => p.id === id);
+    if (idx < 0) throw new ApiError(404, 'Không tìm thấy giai đoạn.');
+    const current = db.phases[idx];
+    if (patch.code !== undefined) {
+      const code = patch.code.trim().toUpperCase();
+      if (db.phases.some((p) => p.id !== id && p.code === code)) {
+        throw new ApiError(422, `Mã giai đoạn "${patch.code}" đã tồn tại.`);
+      }
+      current.code = code;
+    }
+    if (patch.name !== undefined) {
+      if (!patch.name.trim()) throw new ApiError(422, 'Tên giai đoạn là bắt buộc.');
+      current.name = patch.name.trim();
+    }
+    if (patch.sortOrder !== undefined) current.sortOrder = patch.sortOrder;
+    if (patch.startDate !== undefined) current.startDate = patch.startDate;
+    if (patch.endDate !== undefined) current.endDate = patch.endDate;
+    writeLog(actor.id, 'update', 'phase', id);
+    persist(db);
+    return Promise.resolve(current);
+  },
+
+  async deletePhase(token: string | null, id: number): Promise<{ status: string }> {
+    const actor = authorize(token, 'master_plan.delete');
+    await delay();
+    const db = getDb();
+    const idx = db.phases.findIndex((p) => p.id === id);
+    if (idx < 0) throw new ApiError(404, 'Không tìm thấy giai đoạn.');
+    db.phases.splice(idx, 1);
+    writeLog(actor.id, 'delete', 'phase', id);
+    persist(db);
+    return Promise.resolve({ status: 'ok' });
+  },
+
+  /** Admin master-data: Danh sách Trạng thái tài liệu. Quyền: document.view. */
+  async getDocumentStatuses(token: string | null): Promise<DocumentStatusItem[]> {
+    authorize(token, 'document.view');
+    await delay();
+    const db = getDb();
+    return Promise.resolve([
+      ...STANDARD_DOC_STATUSES.filter((s) => s.isSystem),
+      ...(db.documentsStatuses ?? []).filter((s) => !s.isSystem),
+    ]);
+  },
+
+  async createDocumentStatus(
+    token: string | null,
+    input: { code: string; label: string; color?: string; sortOrder?: number; isActive?: boolean },
+  ): Promise<DocumentStatusItem> {
+    const actor = authorize(token, 'document_status.manage');
+    await delay();
+    const db = getDb();
+    if (!input.code.trim()) throw new ApiError(422, 'Mã trạng thái là bắt buộc.');
+    if (!input.label.trim()) throw new ApiError(422, 'Tên trạng thái là bắt buộc.');
+    if (db.documents.some((d) => d.status === input.code.trim())) {
+      throw new ApiError(422, `Trạng thái "${input.code}" đang được sử dụng.`);
+    }
+    const status: DocumentStatusItem = {
+      id: nextId(db),
+      code: input.code.trim(),
+      label: input.label.trim(),
+      color: input.color?.trim() || undefined,
+      sortOrder: input.sortOrder ?? 0,
+      isActive: input.isActive ?? true,
+      isSystem: false,
+    };
+    db.documentsStatuses = [...(db.documentsStatuses ?? []), status];
+    writeLog(actor.id, 'create', 'document_status', status.id);
+    persist(db);
+    return Promise.resolve(status);
+  },
+
+  async updateDocumentStatus(
+    token: string | null,
+    id: number,
+    patch: { label?: string; color?: string; sortOrder?: number; isActive?: boolean },
+  ): Promise<DocumentStatusItem> {
+    const actor = authorize(token, 'document_status.manage');
+    await delay();
+    const db = getDb();
+    const idx = db.documentsStatuses.findIndex((s) => s.id === id);
+    if (idx < 0) throw new ApiError(404, 'Không tìm thấy trạng thái tài liệu.');
+    const current = db.documentsStatuses[idx];
+    if (patch.label !== undefined) {
+      if (!patch.label.trim()) throw new ApiError(422, 'Tên trạng thái là bắt buộc.');
+      current.label = patch.label.trim();
+    }
+    if (patch.color !== undefined) current.color = patch.color.trim() || undefined;
+    if (patch.sortOrder !== undefined) current.sortOrder = patch.sortOrder;
+    if (patch.isActive !== undefined) current.isActive = patch.isActive;
+    writeLog(actor.id, 'update', 'document_status', id);
+    persist(db);
+    return Promise.resolve(current);
+  },
+
+  async deleteDocumentStatus(token: string | null, id: number): Promise<{ status: string }> {
+    const actor = authorize(token, 'document_status.manage');
+    await delay();
+    const db = getDb();
+    const idx = db.documentsStatuses.findIndex((s) => s.id === id);
+    if (idx < 0) throw new ApiError(404, 'Không tìm thấy trạng thái tài liệu.');
+    db.documentsStatuses.splice(idx, 1);
+    writeLog(actor.id, 'delete', 'document_status', id);
+    persist(db);
+    return Promise.resolve({ status: 'ok' });
+  },
+
 };
 
 

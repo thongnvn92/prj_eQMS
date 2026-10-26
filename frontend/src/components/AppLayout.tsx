@@ -8,6 +8,7 @@ import {
   LogoutOutlined,
   ScheduleOutlined,
   SettingOutlined,
+  TeamOutlined,
   UserOutlined,
   WarningOutlined,
   RobotOutlined,
@@ -26,6 +27,7 @@ interface NavItem {
   label: string;
   icon: ReactNode;
   perm: Permission;
+  children?: NavItem[];
 }
 
 const NAV: NavItem[] = [
@@ -36,7 +38,17 @@ const NAV: NavItem[] = [
   { key: '/opportunities', label: 'Cơ hội', icon: <RobotOutlined />, perm: 'opportunity.view' },
   { key: '/documents', label: 'Tài liệu (Documents)', icon: <FileTextOutlined />, perm: 'document.view' },
   { key: '/actions', label: 'Action / CAPA', icon: <CarryOutOutlined />, perm: 'action.view' },
-  { key: '/admin', label: 'Quản trị', icon: <SettingOutlined />, perm: 'user.view' },
+  {
+    key: '/admin',
+    label: 'Quản trị',
+    icon: <SettingOutlined />,
+    perm: 'user.view',
+    children: [
+      { key: '/admin/users', label: 'Quản lý user', icon: <UserOutlined />, perm: 'user.view' },
+      { key: '/admin/functions', label: 'Quản lý chức năng', icon: <TeamOutlined />, perm: 'user.view' },
+      { key: '/admin/settings', label: 'Setting', icon: <SettingOutlined />, perm: 'user.view' },
+    ],
+  },
 ];
 
 export default function AppLayout() {
@@ -45,16 +57,22 @@ export default function AppLayout() {
   const navigate = useNavigate();
 
   // Menu chỉ hiển thị những mục user có quyền (FR-ORG / UX)
-  const menuItems = NAV.filter((n) => can(n.perm)).map((n) => ({
-    key: n.key,
-    icon: n.icon,
-    label: n.label,
-  }));
+  const menuItems = NAV
+    .filter((n) => can(n.perm))
+    .map((n) => ({
+      key: n.key,
+      icon: n.icon,
+      label: n.label,
+      children: n.children?.map((c) => ({ key: c.key, icon: c.icon, label: c.label })),
+    }));
 
   const selectedKey =
-    NAV.map((n) => n.key).find(
-      (k) => location.pathname === k || (k !== '/' && location.pathname.startsWith(k)),
-    ) ?? '/';
+    NAV.flatMap((n) => [n.key, ...(n.children?.map((child) => child.key) ?? [])])
+      .filter(
+        (k) =>
+          location.pathname === k || (k !== '/' && location.pathname.startsWith(k)),
+      )
+      .sort((a, b) => b.length - a.length)[0] ?? '/';
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -75,7 +93,7 @@ export default function AppLayout() {
         <Space size="middle">
           <span className="eqms-logo">DMC eQMS</span>
           <Typography.Text style={{ color: 'rgba(255,255,255,0.65)' }} type="secondary">
-            Hệ thống quản lý ISO & Chất lượng điện tử
+            Hệ thống quản lý chất lượng điện tử
           </Typography.Text>
         </Space>
         <Space size="middle">

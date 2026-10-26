@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Document extends BaseModel
 {
     protected $fillable = [
-        'code', 'name', 'doc_type', 'department_id', 'owner_id', 'current_version',
+        'code', 'name', 'doc_type', 'department_id', 'owner_id', 'owner_name', 'current_version',
         'status', 'status_updated_at', 'auto_version', 'workflow_step', 'related_task_id', 'description', 'effective_date',
     ];
 

@@ -7,7 +7,7 @@
 import { mockApi, ApiError } from '../mock/api';
 import type {
   ActionItem, DashboardStats, Department, DocAction,
-  DocumentFile, DocumentItem, MasterPlan, OpportunityItem, OpportunityLevel, Phase,
+  DocumentFile, DocumentItem, DocumentStatusItem, MasterPlan, OpportunityItem, OpportunityLevel, Phase,
   ReviewFrequency, RiskAssessmentItem, RiskDashboardStats, RiskItem, RiskLevel, RoStatus, SessionUser, Task, TaskStatus,
 } from '../mock/types';
 
@@ -118,16 +118,19 @@ export const api = {
   lookups: () =>
     USE_MOCK
       ? mockApi.getLookups(token())
-      : http<{ people: { id: number; fullName: string }[]; departments: Department[]; phases: Phase[] }>(
-          '/lookups',
-        ),
+      : http<{
+          people: { id: number; fullName: string }[];
+          departments: Department[];
+          phases: Phase[];
+          documentStatuses: DocumentStatusItem[];
+        }>('/lookups'),
 
   masterPlan: () =>
     USE_MOCK ? mockApi.getMasterPlan(token()) : http<{ phases: Phase[]; tasks: Task[] }>('/master-plan'),
 
   dashboard: () => (USE_MOCK ? mockApi.getDashboard(token()) : http<DashboardStats>('/dashboard')),
 
-  updateTask: (id: number, patch: { status?: TaskStatus; progress?: number; ownerId?: number; note?: string }) =>
+  updateTask: (id: number, patch: { status?: TaskStatus; progress?: number; ownerId?: number | null; ownerName?: string | null; note?: string }) =>
     USE_MOCK
       ? mockApi.updateTask(token(), id, patch)
       : http<Task>(`/master-plan/tasks/${id}`, { method: 'PATCH', body: patch }),
@@ -153,7 +156,7 @@ export const api = {
 
   createDocument: (input: {
     code: string; name: string; docType: DocumentItem['docType'];
-    departmentId?: number | null; ownerId?: number | null;
+    departmentId?: number | null; ownerId?: number | null; ownerName?: string | null;
     relatedTaskId?: number | null; description?: string; changeSummary?: string;
     autoVersion?: boolean;
   }) =>
@@ -163,7 +166,7 @@ export const api = {
 
   // ---------- Import hàng loạt (bulk) – 1 request thay cho N lần create ----------
   importDocuments: async (
-    rows: Array<{ line?: number; code: string; name: string; docType: DocumentItem['docType']; departmentId?: number | null; ownerId?: number | null; description?: string }>,
+    rows: Array<{ line?: number; code: string; name: string; docType: DocumentItem['docType']; departmentId?: number | null; ownerId?: number | null; ownerName?: string | null; description?: string }>,
   ): Promise<ImportResult> => {
     if (!USE_MOCK) return http<ImportResult>('/documents/import', { method: 'POST', body: { rows } });
     const errors: ImportRowError[] = [];
@@ -182,7 +185,7 @@ export const api = {
 
   updateDocument: (id: number, patch: {
     code?: string; name?: string; docType?: DocumentItem['docType'];
-    departmentId?: number | null; ownerId?: number | null;
+    departmentId?: number | null; ownerId?: number | null; ownerName?: string | null;
     relatedTaskId?: number | null; description?: string; changeSummary?: string;
     autoVersion?: boolean; version?: string;
   }) =>
@@ -311,7 +314,7 @@ export const api = {
 
   createTask: (input: {
     phaseId: number; parentId?: number | null; code: string; name: string;
-    ownerId?: number | null; departmentId?: number | null; priority?: Task['priority'];
+    ownerId?: number | null; ownerName?: string | null; departmentId?: number | null; priority?: Task['priority'];
     startDate: string; dueDate: string; note?: string;
   }) =>
     USE_MOCK
@@ -320,7 +323,7 @@ export const api = {
 
   // ---------- Import hàng loạt (bulk) – 1 request thay cho N lần create ----------
   importTasks: async (
-    rows: Array<{ line?: number; phaseId: number; parentId?: number | null; code: string; name: string; ownerId?: number | null; departmentId?: number | null; priority?: Task['priority']; startDate: string; dueDate: string; note?: string }>,
+    rows: Array<{ line?: number; phaseId: number; parentId?: number | null; code: string; name: string; ownerId?: number | null; ownerName?: string | null; departmentId?: number | null; priority?: Task['priority']; startDate: string; dueDate: string; note?: string }>,
   ): Promise<ImportResult> => {
     if (!USE_MOCK) return http<ImportResult>('/master-plan/tasks/import', { method: 'POST', body: { rows } });
     const errors: ImportRowError[] = [];
@@ -359,7 +362,7 @@ export const api = {
 
   updateAction: (id: number, patch: {
     status?: ActionItem['status']; progress?: number; result?: string; evidence?: string;
-    title?: string; source?: ActionItem['source']; ownerId?: number | null; departmentId?: number | null; dueDate?: string;
+    title?: string; source?: ActionItem['source']; ownerId?: number | null; ownerName?: string | null; departmentId?: number | null; dueDate?: string;
     relatedRiskId?: number | null; relatedOpportunityId?: number | null;
   }) =>
     USE_MOCK
@@ -368,7 +371,7 @@ export const api = {
 
   createAction: (input: {
     code: string; title: string; description?: string; source: ActionItem['source'];
-    departmentId?: number | null; ownerId?: number | null; issueDescription?: string;
+    departmentId?: number | null; ownerId?: number | null; ownerName?: string | null; issueDescription?: string;
     relatedDocumentId?: number | null; relatedTaskId?: number | null; dueDate: string;
     relatedRiskId?: number | null; relatedOpportunityId?: number | null;
   }) =>
@@ -395,7 +398,7 @@ export const api = {
   createRisk: (input: {
     sourceType: RiskItem['sourceType']; category?: string | null; objective?: string | null; description?: string | null;
     likelihood: number; impact: number; treatment?: string | null; expectedResult?: string | null;
-    ownerId?: number | null; departmentId?: number | null; startDate?: string | null; dueDate?: string | null;
+    ownerId?: number | null; ownerName?: string | null; departmentId?: number | null; startDate?: string | null; dueDate?: string | null;
     reviewFrequency?: ReviewFrequency | null; nextReviewDate?: string | null;
   }) =>
     USE_MOCK
@@ -442,7 +445,7 @@ export const api = {
   createOpportunity: (input: {
     sourceType: OpportunityItem['sourceType']; category?: string | null; objective?: string | null; description?: string | null;
     feasibility: number; benefit: number; solution?: string | null; expectedResult?: string | null;
-    ownerId?: number | null; departmentId?: number | null; startDate?: string | null; dueDate?: string | null;
+    ownerId?: number | null; ownerName?: string | null; departmentId?: number | null; startDate?: string | null; dueDate?: string | null;
     reviewFrequency?: ReviewFrequency | null; nextReviewDate?: string | null;
   }) =>
     USE_MOCK
@@ -502,6 +505,12 @@ export const api = {
       ? mockApi.deleteUser(token(), id)
       : http<{ status: string }>(`/admin/users/${id}`, { method: 'DELETE' }),
 
+  // Get single user by ID
+  getUser: (id: number) =>
+    USE_MOCK
+      ? mockApi.getUser(token(), id)
+      : http<AdminUserRow>(`/admin/users/${id}`),
+
   // ---------- Admin CRUD: Vai trò & Phân quyền ----------
   createRole: (input: { code: string; name: string; description?: string; permissions?: string[] }) =>
     USE_MOCK
@@ -522,7 +531,116 @@ export const api = {
     if (USE_MOCK) return mockApi.resetDemo(token());
     await http('/admin/reset-demo', { method: 'POST' });
   },
+
+/**
+ * Admin master-data – CRUD Phòng ban.
+ * Quyền: GET department.view | POST/PATCH/DELETE department.manage.
+ */
+adminDepartments: () =>
+  USE_MOCK
+    ? mockApi.getDepartments(token())
+    : http<Department[]>('/admin/departments'),
+
+createDepartment: (input: {
+  code: string;
+  name: string;
+  description?: string;
+  isActive?: boolean;
+}) =>
+  USE_MOCK
+    ? mockApi.createDepartment(token(), input)
+    : http<Department>('/admin/departments', { method: 'POST', body: input }),
+
+updateDepartment: (id: number, patch: {
+  code?: string;
+  name?: string;
+  description?: string;
+  isActive?: boolean;
+}) =>
+  USE_MOCK
+    ? mockApi.updateDepartment(token(), id, patch)
+    : http<Department>(`/admin/departments/${id}`, { method: 'PATCH', body: patch }),
+
+deleteDepartment: (id: number) =>
+  USE_MOCK
+    ? mockApi.deleteDepartment(token(), id)
+    : http<{ status: string }>(`/admin/departments/${id}`, { method: 'DELETE' }),
+
+/**
+ * Admin master-data – CRUD Giai đoạn (phase).
+ * Quyền: POST/PATCH/DELETE master_plan.create | master_plan.update | master_plan.delete.
+ */
+adminPhases: () =>
+  USE_MOCK
+    ? mockApi.getPhases(token())
+    : http<Phase[]>('/admin/phases'),
+
+createPhase: (input: {
+  masterPlanId?: number;
+  code: string;
+  name: string;
+  sortOrder?: number;
+  startDate?: string;
+  endDate?: string;
+}) =>
+  USE_MOCK
+    ? mockApi.createPhase(token(), input)
+    : http<Phase>('/admin/phases', { method: 'POST', body: input }),
+
+updatePhase: (id: number, patch: {
+  masterPlanId?: number;
+  code?: string;
+  name?: string;
+  sortOrder?: number;
+  startDate?: string;
+  endDate?: string;
+}) =>
+  USE_MOCK
+    ? mockApi.updatePhase(token(), id, patch)
+    : http<Phase>(`/admin/phases/${id}`, { method: 'PATCH', body: patch }),
+
+deletePhase: (id: number) =>
+  USE_MOCK
+    ? mockApi.deletePhase(token(), id)
+    : http<{ status: string }>(`/admin/phases/${id}`, { method: 'DELETE' }),
+
+/**
+ * Admin master-data – CRUD Trạng thái tài liệu (document_statuses).
+ * Quyền: POST/PATCH/DELETE document_status.manage.
+ */
+adminDocumentStatuses: () =>
+  USE_MOCK
+    ? mockApi.getDocumentStatuses(token())
+    : http<DocumentStatusItem[]>('/admin/document-statuses'),
+
+createDocumentStatus: (input: {
+  code: string;
+  label: string;
+  color?: string;
+  sortOrder?: number;
+  isActive?: boolean;
+}) =>
+  USE_MOCK
+    ? mockApi.createDocumentStatus(token(), input)
+    : http<DocumentStatusItem>('/admin/document-statuses', { method: 'POST', body: input }),
+
+updateDocumentStatus: (id: number, patch: {
+  label?: string;
+  color?: string;
+  sortOrder?: number;
+  isActive?: boolean;
+}) =>
+  USE_MOCK
+    ? mockApi.updateDocumentStatus(token(), id, patch)
+    : http<DocumentStatusItem>(`/admin/document-statuses/${id}`, { method: 'PATCH', body: patch }),
+
+deleteDocumentStatus: (id: number) =>
+  USE_MOCK
+    ? mockApi.deleteDocumentStatus(token(), id)
+    : http<{ status: string }>(`/admin/document-statuses/${id}`, { method: 'DELETE' }),
+
 };
+
 
 /** Đang dùng mock API? (dev/test) – để UI/debug phân biệt chế độ. */
 export const isMockApi = USE_MOCK;

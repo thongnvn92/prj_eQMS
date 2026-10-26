@@ -31,7 +31,7 @@ export const createDocument = createAsyncThunk(
   'documents/create',
   async (input: {
     code: string; name: string; docType: DocumentItem['docType'];
-    departmentId?: number | null; ownerId?: number | null;
+    departmentId?: number | null; ownerId?: number | null; ownerName?: string | null;
     relatedTaskId?: number | null; description?: string; changeSummary?: string;
     autoVersion?: boolean;
   }, { dispatch }) => {
@@ -56,7 +56,7 @@ export const updateDocument = createAsyncThunk(
   async (input: {
     id: number; patch: {
       code?: string; name?: string; docType?: DocumentItem['docType'];
-      departmentId?: number | null; ownerId?: number | null;
+      departmentId?: number | null; ownerId?: number | null; ownerName?: string | null;
       relatedTaskId?: number | null; description?: string; changeSummary?: string;
       autoVersion?: boolean; version?: string;
     };

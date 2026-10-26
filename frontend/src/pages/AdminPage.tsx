@@ -13,9 +13,18 @@ import {
 import type { AiProvider, AiSettings } from '../services/ai';
 import {
   useCreateRole,
+  useCreateDepartment,
+  useCreateDocumentStatus,
+  useCreatePhase,
   useCreateUser,
   useDeleteRole,
+  useDeleteDepartment,
+  useDeleteDocumentStatus,
+  useDeletePhase,
   useDeleteUser,
+  useAdminDepartments,
+  useAdminDocumentStatuses,
+  useAdminPhases,
   useDocuments,
   useImportDocuments,
   useImportTasks,
@@ -24,12 +33,17 @@ import {
   useResetDemo,
   useRoles,
   useUpdateRole,
+  useUpdateDepartment,
+  useUpdateDocumentStatus,
+  useUpdatePhase,
   useUpdateUser,
   useUsers,
 } from '../hooks/queries';
 import { ApiError } from '../services/api';
 import CsvImportPanel, { type CsvImportBatchResult } from '../components/CsvImportPanel';
 import { DOC_TYPE_LABEL } from '../components/widgets';
+import UserCreateModal from '../components/UserCreateModal';
+import UserEditModal from '../components/UserEditModal';
 import type { DocumentType, Task } from '../mock/types';
 
 interface SafeUser {
@@ -48,6 +62,8 @@ interface RoleRow {
   name: string;
   permissions: string[];
 }
+
+type AdminSection = 'all' | 'users' | 'functions' | 'settings';
 
 /** Nhóm permissions theo module (dashboard, master_plan, document, ...) để render ma trận. */
 const PERMISSION_GROUPS: { module: string; items: string[] }[] = (() => {
@@ -70,7 +86,7 @@ const MODULE_LABEL: Record<string, string> = {
   department: 'Phòng ban',
 };
 
-export default function AdminPage() {
+export default function AdminPage({ section = 'all' }: { section?: AdminSection }) {
   const { message } = App.useApp();
   const { can, user: me } = useAuth();
   const { data: users, isLoading: loadingUsers } = useUsers();
@@ -93,14 +109,33 @@ export default function AdminPage() {
   const canCreateUser = can('user.create');
   const canUpdateUser = can('user.update');
   const canManageRole = can('role.manage');
+  const canManageDepartment = can('department.manage');
+  const canManagePhase = can('master_plan.create') || can('master_plan.update') || can('master_plan.delete');
+  const canManageDocumentStatus = can('document_status.manage');
+
+  const { data: adminDepartments = [], isLoading: loadingDepartments } = useAdminDepartments();
+  const { data: adminPhases = [], isLoading: loadingPhases } = useAdminPhases();
+  const { data: adminDocumentStatuses = [], isLoading: loadingDocumentStatuses } = useAdminDocumentStatuses();
+
+  const departmentCreator = useCreateDepartment();
+  const departmentUpdater = useUpdateDepartment();
+  const departmentRemover = useDeleteDepartment();
+  const phaseCreator = useCreatePhase();
+  const phaseUpdater = useUpdatePhase();
+  const phaseRemover = useDeletePhase();
+  const docStatusCreator = useCreateDocumentStatus();
+  const docStatusUpdater = useUpdateDocumentStatus();
+  const docStatusRemover = useDeleteDocumentStatus();
 
   const [userModal, setUserModal] = useState<{ user: SafeUser | null } | null>(null);
-  const [userForm] = Form.useForm<{
-    username: string; password?: string; fullName: string; email?: string;
-    departmentId?: number | null; roleCodes: string[]; active: boolean;
-  }>();
   const [roleModal, setRoleModal] = useState<{ role: RoleRow | null } | null>(null);
   const [roleForm] = Form.useForm<{ code: string; name: string; description?: string; permissions: string[] }>();
+  const [departmentModal, setDepartmentModal] = useState<{ department: { id: number; code: string; name: string; description?: string; isActive?: boolean } | null } | null>(null);
+  const [departmentForm] = Form.useForm<{ code: string; name: string; description?: string; isActive: boolean }>();
+  const [phaseModal, setPhaseModal] = useState<{ phase: { id: number; code: string; name: string; sortOrder?: number; startDate?: string; endDate?: string } | null } | null>(null);
+  const [phaseForm] = Form.useForm<{ code: string; name: string; sortOrder?: number; startDate?: string; endDate?: string }>();
+  const [docStatusModal, setDocStatusModal] = useState<{ status: { id: number; code: string; label: string; color?: string; sortOrder?: number; isActive?: boolean; isSystem?: boolean } | null } | null>(null);
+  const [docStatusForm] = Form.useForm<{ label: string; color?: string; sortOrder?: number; isActive: boolean }>();
 
   // ---------- Import CSV (Master Plan ISO / Document Control) ----------
   const people = lookups?.people ?? [];
@@ -262,51 +297,67 @@ export default function AdminPage() {
 
   // ---------- Người dùng: mở form + submit ----------
   const openCreateUser = () => {
-    userForm.resetFields();
-    userForm.setFieldsValue({ active: true, roleCodes: [] });
     setUserModal({ user: null });
   };
 
   const openEditUser = (u: SafeUser) => {
-    userForm.resetFields();
-    userForm.setFieldsValue({
-      username: u.username, fullName: u.fullName, email: u.email ?? undefined,
-      departmentId: u.departmentId, roleCodes: u.roleCodes, active: u.active,
-    });
     setUserModal({ user: u });
   };
 
-  const submitUser = () => {
-    userForm
-      .validateFields()
-      .then((v) => {
-        const done = () => {
-          message.success(userModal?.user ? `Đã cập nhật ${v.username}` : `Đã tạo người dùng ${v.username}`);
-          setUserModal(null);
-        };
-        if (userModal?.user) {
-          updater.mutate(
-            {
-              id: userModal.user.id,
-              patch: {
-                username: v.username, fullName: v.fullName, email: v.email,
-                departmentId: v.departmentId, roleCodes: v.roleCodes, active: v.active,
-                ...(v.password ? { password: v.password } : {}),
-              },
-            },
-            { onSuccess: done, onError: (e) => onErr(e, 'Cập nhật thất bại') },
-          );
-        } else {
-          creator.mutate(
-            {
-              username: v.username, password: v.password ?? '', fullName: v.fullName, email: v.email,
-              departmentId: v.departmentId, roleCodes: v.roleCodes, active: v.active,
-            },
-            { onSuccess: done, onError: (e) => onErr(e, 'Tạo người dùng thất bại') },
-          );
-        }
-      })
-      .catch(() => undefined);
+  // Lưu ý: không dùng useEffect để setFieldsValue nữa.
+  // UserEditModal internal sẽ dùng useEffect để nạp dữ liệu khi user prop thay đổi.
+
+  const submitUser = (values: {
+    username: string;
+    fullName: string;
+    email?: string;
+    departmentId?: number | null;
+    roleCodes: string[];
+    active: boolean;
+    password?: string;
+  }) => {
+    if (userModal?.user) {
+      updater.mutate(
+        {
+          id: userModal.user.id,
+          patch: {
+            username: values.username,
+            fullName: values.fullName,
+            email: values.email,
+            departmentId: values.departmentId,
+            roleCodes: values.roleCodes,
+            active: values.active,
+            ...(values.password ? { password: values.password } : {}),
+          },
+        },
+        {
+          onSuccess: () => {
+            message.success(`Đã cập nhật ${values.username}`);
+            setUserModal(null);
+          },
+          onError: (e) => onErr(e, 'Cập nhật thất bại'),
+        },
+      );
+    } else {
+      creator.mutate(
+        {
+          username: values.username,
+          password: values.password ?? '',
+          fullName: values.fullName,
+          email: values.email,
+          departmentId: values.departmentId,
+          roleCodes: values.roleCodes,
+          active: values.active,
+        },
+        {
+          onSuccess: () => {
+            message.success(`Đã tạo người dùng ${values.username}`);
+            setUserModal(null);
+          },
+          onError: (e) => onErr(e, 'Tạo người dùng thất bại'),
+        },
+      );
+    }
   };
 
   const removeUser = (u: SafeUser) => {
@@ -318,14 +369,10 @@ export default function AdminPage() {
 
   // ---------- Vai trò: mở form + submit ----------
   const openCreateRole = () => {
-    roleForm.resetFields();
-    roleForm.setFieldsValue({ permissions: [] });
     setRoleModal({ role: null });
   };
 
   const openEditRole = (r: RoleRow) => {
-    roleForm.resetFields();
-    roleForm.setFieldsValue({ code: r.code, name: r.name, permissions: [...r.permissions] });
     setRoleModal({ role: r });
   };
 
@@ -363,6 +410,120 @@ export default function AdminPage() {
     });
   };
 
+  const openCreateDepartment = () => {
+    setDepartmentModal({ department: null });
+  };
+
+  const openEditDepartment = (dept: { id: number; code: string; name: string; description?: string; isActive?: boolean }) => {
+    setDepartmentModal({ department: dept });
+  };
+
+  const submitDepartment = () => {
+    departmentForm.validateFields().then((v) => {
+      const payload = { code: v.code, name: v.name, description: v.description, isActive: v.isActive ?? true };
+      if (departmentModal?.department) {
+        departmentUpdater.mutate({ id: departmentModal.department.id, patch: payload }, {
+          onSuccess: () => {
+            message.success(`Đã cập nhật phòng ban ${v.code}`);
+            setDepartmentModal(null);
+          },
+          onError: (e) => onErr(e, 'Cập nhật phòng ban thất bại'),
+        });
+      } else {
+        departmentCreator.mutate(payload, {
+          onSuccess: () => {
+            message.success(`Đã tạo phòng ban ${v.code}`);
+            setDepartmentModal(null);
+          },
+          onError: (e) => onErr(e, 'Tạo phòng ban thất bại'),
+        });
+      }
+    }).catch(() => undefined);
+  };
+
+  const removeDepartment = (dept: { id: number; name: string }) => {
+    departmentRemover.mutate(dept.id, {
+      onSuccess: () => message.success(`Đã xóa phòng ban ${dept.name}`),
+      onError: (e) => onErr(e, 'Xóa phòng ban thất bại'),
+    });
+  };
+
+  const openCreatePhase = () => {
+    setPhaseModal({ phase: null });
+  };
+
+  const openEditPhase = (phase: { id: number; code: string; name: string; sortOrder?: number; startDate?: string; endDate?: string }) => {
+    setPhaseModal({ phase });
+  };
+
+  const submitPhase = () => {
+    phaseForm.validateFields().then((v) => {
+      const payload = { code: v.code, name: v.name, sortOrder: v.sortOrder ?? 0, startDate: v.startDate ?? '', endDate: v.endDate ?? '' };
+      if (phaseModal?.phase) {
+        phaseUpdater.mutate({ id: phaseModal.phase.id, patch: payload }, {
+          onSuccess: () => {
+            message.success(`Đã cập nhật giai đoạn ${v.code}`);
+            setPhaseModal(null);
+          },
+          onError: (e) => onErr(e, 'Cập nhật giai đoạn thất bại'),
+        });
+      } else {
+        phaseCreator.mutate(payload, {
+          onSuccess: () => {
+            message.success(`Đã tạo giai đoạn ${v.code}`);
+            setPhaseModal(null);
+          },
+          onError: (e) => onErr(e, 'Tạo giai đoạn thất bại'),
+        });
+      }
+    }).catch(() => undefined);
+  };
+
+  const removePhase = (phase: { id: number; name: string }) => {
+    phaseRemover.mutate(phase.id, {
+      onSuccess: () => message.success(`Đã xóa giai đoạn ${phase.name}`),
+      onError: (e) => onErr(e, 'Xóa giai đoạn thất bại'),
+    });
+  };
+
+  const openCreateDocStatus = () => {
+    setDocStatusModal({ status: null });
+  };
+
+  const openEditDocStatus = (status: { id: number; code: string; label: string; color?: string; sortOrder?: number; isActive?: boolean; isSystem?: boolean }) => {
+    setDocStatusModal({ status });
+  };
+
+  const submitDocStatus = () => {
+    docStatusForm.validateFields().then((v) => {
+      const payload = { label: v.label, color: v.color, sortOrder: v.sortOrder ?? 0, isActive: v.isActive ?? true };
+      if (docStatusModal?.status) {
+        docStatusUpdater.mutate({ id: docStatusModal.status.id, patch: payload }, {
+          onSuccess: () => {
+            message.success(`Đã cập nhật trạng thái ${docStatusModal.status!.label}`);
+            setDocStatusModal(null);
+          },
+          onError: (e) => onErr(e, 'Cập nhật trạng thái tài liệu thất bại'),
+        });
+      } else {
+        docStatusCreator.mutate({ code: (v.label || '').trim().replace(/\s+/g, '_').toLowerCase(), label: v.label, color: v.color, sortOrder: v.sortOrder ?? 0, isActive: v.isActive ?? true }, {
+          onSuccess: () => {
+            message.success(`Đã tạo trạng thái ${v.label}`);
+            setDocStatusModal(null);
+          },
+          onError: (e) => onErr(e, 'Tạo trạng thái tài liệu thất bại'),
+        });
+      }
+    }).catch(() => undefined);
+  };
+
+  const removeDocStatus = (status: { id: number; label: string }) => {
+    docStatusRemover.mutate(status.id, {
+      onSuccess: () => message.success(`Đã xóa trạng thái ${status.label}`),
+      onError: (e) => onErr(e, 'Xóa trạng thái tài liệu thất bại'),
+    });
+  };
+
   // ---------- Cột bảng ----------
   const userColumns = [
     { title: 'Username', dataIndex: 'username', width: 130 },
@@ -396,7 +557,11 @@ export default function AdminPage() {
       render: (_: unknown, u: SafeUser) => (
         <Space size={4}>
           {canUpdateUser && (
-            <Button size="small" icon={<EditOutlined />} onClick={() => openEditUser(u)}>
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => openEditUser(u)}
+            >
               Sửa
             </Button>
           )}
@@ -466,6 +631,96 @@ export default function AdminPage() {
     },
   ];
 
+  const departmentColumns = [
+    { title: 'Mã', dataIndex: 'code', width: 120 },
+    { title: 'Tên phòng ban', dataIndex: 'name', width: 220 },
+    { title: 'Mô tả', dataIndex: 'description', render: (_: unknown, dept: { description?: string }) => dept.description || '—' },
+    {
+      title: 'Trạng thái',
+      key: 'active',
+      width: 100,
+      render: (_: unknown, dept: { isActive?: boolean }) => <Tag color={dept.isActive === false ? 'default' : 'green'}>{dept.isActive === false ? 'Tắt' : 'Hoạt động'}</Tag>,
+    },
+    {
+      title: 'Thao tác',
+      key: 'actions',
+      width: 150,
+      render: (_: unknown, dept: { id: number; code: string; name: string; description?: string; isActive?: boolean }) => (
+        <Space size={4}>
+          {canManageDepartment && (
+            <Button size="small" icon={<EditOutlined />} onClick={() => openEditDepartment(dept)}>
+              Sửa
+            </Button>
+          )}
+          {canManageDepartment && (
+            <Popconfirm title={`Xóa phòng ban "${dept.name}"?`} okText="Xóa" cancelText="Hủy" okButtonProps={{ danger: true }} onConfirm={() => removeDepartment(dept)}>
+              <Button size="small" danger icon={<DeleteOutlined />} />
+            </Popconfirm>
+          )}
+        </Space>
+      ),
+    },
+  ];
+
+  const phaseColumns = [
+    { title: 'Mã', dataIndex: 'code', width: 120 },
+    { title: 'Tên giai đoạn', dataIndex: 'name', width: 220 },
+    { title: 'Thứ tự', dataIndex: 'sortOrder', width: 90, render: (_: unknown, phase: { sortOrder?: number }) => phase.sortOrder ?? 0 },
+    { title: 'Ngày bắt đầu', dataIndex: 'startDate', width: 140, render: (_: unknown, phase: { startDate?: string }) => phase.startDate || '—' },
+    { title: 'Ngày kết thúc', dataIndex: 'endDate', width: 140, render: (_: unknown, phase: { endDate?: string }) => phase.endDate || '—' },
+    {
+      title: 'Thao tác',
+      key: 'actions',
+      width: 150,
+      render: (_: unknown, phase: { id: number; code: string; name: string; sortOrder?: number; startDate?: string; endDate?: string }) => (
+        <Space size={4}>
+          {canManagePhase && (
+            <Button size="small" icon={<EditOutlined />} onClick={() => openEditPhase(phase)}>
+              Sửa
+            </Button>
+          )}
+          {canManagePhase && (
+            <Popconfirm title={`Xóa giai đoạn "${phase.name}"?`} okText="Xóa" cancelText="Hủy" okButtonProps={{ danger: true }} onConfirm={() => removePhase(phase)}>
+              <Button size="small" danger icon={<DeleteOutlined />} />
+            </Popconfirm>
+          )}
+        </Space>
+      ),
+    },
+  ];
+
+  const documentStatusColumns = [
+    { title: 'Mã', dataIndex: 'code', width: 120 },
+    { title: 'Tên trạng thái', dataIndex: 'label', width: 220 },
+    { title: 'Màu', key: 'color', width: 100, render: (_: unknown, status: { color?: string }) => status.color ? <Tag color={status.color}>{status.color}</Tag> : '—' },
+    { title: 'Thứ tự', dataIndex: 'sortOrder', width: 90, render: (_: unknown, status: { sortOrder?: number }) => status.sortOrder ?? 0 },
+    {
+      title: 'Trạng thái',
+      key: 'active',
+      width: 100,
+      render: (_: unknown, status: { isActive?: boolean; isSystem?: boolean }) => <Tag color={status.isActive === false ? 'default' : 'processing'}>{status.isSystem ? 'Hệ thống' : status.isActive === false ? 'Tắt' : 'Hoạt động'}</Tag>,
+    },
+    {
+      title: 'Thao tác',
+      key: 'actions',
+      width: 150,
+      render: (_: unknown, status: { id: number; code: string; label: string; color?: string; sortOrder?: number; isActive?: boolean; isSystem?: boolean }) => (
+        <Space size={4}>
+          {canManageDocumentStatus && !status.isSystem && (
+            <Button size="small" icon={<EditOutlined />} onClick={() => openEditDocStatus(status)}>
+              Sửa
+            </Button>
+          )}
+          {canManageDocumentStatus && !status.isSystem && (
+            <Popconfirm title={`Xóa trạng thái "${status.label}"?`} okText="Xóa" cancelText="Hủy" okButtonProps={{ danger: true }} onConfirm={() => removeDocStatus(status)}>
+              <Button size="small" danger icon={<DeleteOutlined />} />
+            </Popconfirm>
+          )}
+        </Space>
+      ),
+    },
+  ];
+
   return (
     <div className="eqms-page">
       <Space
@@ -494,6 +749,7 @@ export default function AdminPage() {
 
       <Card size="small">
         <Tabs
+          defaultActiveKey={section === 'functions' ? 'master-data' : section === 'settings' ? 'ai' : 'users'}
           items={[
             {
               key: 'users',
@@ -539,6 +795,23 @@ export default function AdminPage() {
                     pagination={false}
                   />
                 </>
+              ),
+            },
+            {
+              key: 'master-data',
+              label: 'Quản lý master data',
+              children: (
+                <Space direction="vertical" size={16} style={{ width: '100%' }}>
+                  <Card size="small" title="Nhóm công việc" extra={canManagePhase ? <Button type="primary" size="small" icon={<PlusOutlined />} onClick={openCreatePhase}>Thêm nhóm công việc</Button> : null}>
+                    <Table rowKey="id" size="small" loading={loadingPhases} columns={phaseColumns} dataSource={adminPhases} pagination={false} />
+                  </Card>
+                  <Card size="small" title="Phòng ban" extra={canManageDepartment ? <Button type="primary" size="small" icon={<PlusOutlined />} onClick={openCreateDepartment}>Thêm phòng ban</Button> : null}>
+                    <Table rowKey="id" size="small" loading={loadingDepartments} columns={departmentColumns} dataSource={adminDepartments} pagination={false} />
+                  </Card>
+                  <Card size="small" title="Trạng thái tài liệu" extra={canManageDocumentStatus ? <Button type="primary" size="small" icon={<PlusOutlined />} onClick={openCreateDocStatus}>Thêm trạng thái</Button> : null}>
+                    <Table rowKey="id" size="small" loading={loadingDocumentStatuses} columns={documentStatusColumns} dataSource={adminDocumentStatuses} pagination={false} />
+                  </Card>
+                </Space>
               ),
             },
             {
@@ -677,65 +950,46 @@ export default function AdminPage() {
                 />
               ),
             },
-          ]}
+          ].filter((item) => {
+            if (section === 'all') return true;
+            if (section === 'users') return ['users', 'roles'].includes(item.key);
+            if (section === 'functions') return ['master-data', 'mp-import', 'doc-import'].includes(item.key);
+            return item.key === 'ai';
+          })}
         />
       </Card>
 
-      {/* CRUD Người dùng */}
-      <Modal
-        title={userModal?.user ? `Sửa người dùng – ${userModal.user.username}` : 'Thêm người dùng mới'}
-        open={!!userModal}
-        onCancel={() => setUserModal(null)}
-        onOk={submitUser}
-        okText="Lưu"
-        cancelText="Hủy"
-        confirmLoading={creator.isPending || updater.isPending}
-        destroyOnClose
-      >
-        <Form form={userForm} layout="vertical" preserve={false}>
-          <Form.Item
-            name="username"
-            label="Username"
-            rules={[
-              { required: true, message: 'Bắt buộc' },
-              { pattern: /^[a-zA-Z0-9._-]+$/, message: 'Chỉ gồm chữ, số, dấu chấm/gạch dưới/gạch ngang' },
-            ]}
-          >
-            <Input placeholder="VD: nguyenvana" maxLength={50} />
-          </Form.Item>
-          <Form.Item
-            name="password"
-            label={userModal?.user ? 'Mật khẩu mới (để trống giữ nguyên)' : 'Mật khẩu'}
-            rules={userModal?.user ? [] : [{ required: true, message: 'Bắt buộc' }, { min: 6, message: 'Tối thiểu 6 ký tự' }]}
-          >
-            <Input.Password placeholder="Tối thiểu 6 ký tự" maxLength={100} />
-          </Form.Item>
-          <Form.Item name="fullName" label="Họ và tên" rules={[{ required: true, message: 'Bắt buộc' }]}>
-            <Input placeholder="VD: Nguyễn Văn A" maxLength={150} />
-          </Form.Item>
-          <Form.Item name="email" label="Email" rules={[{ type: 'email', message: 'Email không hợp lệ' }]}>
-            <Input placeholder="VD: a.nv@dmc.vn" maxLength={150} />
-          </Form.Item>
-          <Form.Item name="departmentId" label="Phòng ban">
-            <Select
-              allowClear
-              placeholder="Chọn phòng"
-              options={(lookups?.departments ?? []).map((d) => ({ value: d.id, label: d.name }))}
-            />
-          </Form.Item>
-          <Form.Item name="roleCodes" label="Vai trò (nhiều lựa chọn)" rules={[{ required: true, message: 'Chọn ít nhất 1 vai trò' }]}>
-            <Select
-              mode="multiple"
-              placeholder="Chọn vai trò"
-              optionFilterProp="label"
-              options={(roles ?? []).map((r) => ({ value: r.code, label: `${r.name} (${r.code})` }))}
-            />
-          </Form.Item>
-          <Form.Item name="active" label="Kích hoạt" valuePropName="checked">
-            <Switch checkedChildren="Active" unCheckedChildren="Disabled" />
-          </Form.Item>
-        </Form>
-      </Modal>
+      {/* CRUD Người dùng: chỉ render khi modal thật sự mở */}
+      {userModal && (
+        userModal.user ? (
+          <UserEditModal
+            key={userModal.user.id}
+            lookups={lookups as { departments: { id: number; name: string }[] } | null}
+            roles={roles as { code: string; name: string }[]}
+            user={{
+              id: userModal.user.id,
+              username: userModal.user.username,
+              fullName: userModal.user.fullName,
+              email: userModal.user.email ?? '',
+              departmentId: userModal.user.departmentId,
+              roleCodes: userModal.user.roleCodes,
+              active: userModal.user.active,
+            }}
+            onSubmit={submitUser}
+            onCancel={() => setUserModal(null)}
+            loading={updater.isPending || creator.isPending}
+          />
+        ) : (
+          <UserCreateModal
+            lookups={lookups as { departments: { id: number; name: string }[] } | null}
+            roles={roles as { code: string; name: string }[]}
+            createMode
+            onSubmit={submitUser}
+            onCancel={() => setUserModal(null)}
+            loading={creator.isPending || updater.isPending}
+          />
+        )
+      )}
 
       {/* CRUD Vai trò & Phân quyền */}
       <Modal
@@ -747,9 +1001,32 @@ export default function AdminPage() {
         cancelText="Hủy"
         width={720}
         confirmLoading={roleCreator.isPending || roleUpdater.isPending}
-        destroyOnClose
+        destroyOnHidden
+        afterOpenChange={(open) => {
+          if (!open) return;
+          roleForm.resetFields();
+          if (roleModal?.role) {
+            roleForm.setFieldsValue({
+              code: roleModal.role.code,
+              name: roleModal.role.name,
+              permissions: [...roleModal.role.permissions],
+            });
+          } else {
+            roleForm.setFieldsValue({ permissions: [] });
+          }
+        }}
       >
-        <Form form={roleForm} layout="vertical" preserve={false}>
+        <Form
+          key={roleModal?.role?.code ?? 'new-role'}
+          form={roleForm}
+          layout="vertical"
+          preserve={false}
+          initialValues={{
+            code: roleModal?.role?.code,
+            name: roleModal?.role?.name,
+            permissions: roleModal?.role?.permissions ?? [],
+          }}
+        >
           <Form.Item
             name="code"
             label="Mã vai trò"
@@ -784,6 +1061,121 @@ export default function AdminPage() {
                 </div>
               ))}
             </Checkbox.Group>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title={departmentModal?.department ? `Sửa phòng ban - ${departmentModal.department.name}` : 'Thêm phòng ban'}
+        open={!!departmentModal}
+        onCancel={() => setDepartmentModal(null)}
+        onOk={submitDepartment}
+        okText="Lưu"
+        cancelText="Hủy"
+        confirmLoading={departmentCreator.isPending || departmentUpdater.isPending}
+        destroyOnHidden
+      >
+        <Form
+          key={departmentModal?.department?.id ?? 'new-department'}
+          form={departmentForm}
+          layout="vertical"
+          preserve={false}
+          initialValues={{
+            code: departmentModal?.department?.code,
+            name: departmentModal?.department?.name,
+            description: departmentModal?.department?.description ?? '',
+            isActive: departmentModal?.department?.isActive ?? true,
+          }}
+        >
+          <Form.Item name="code" label="Mã phòng ban" rules={[{ required: true, message: 'Bắt buộc' }]}>
+            <Input placeholder="VD: HR" maxLength={20} disabled={!!departmentModal?.department} />
+          </Form.Item>
+          <Form.Item name="name" label="Tên phòng ban" rules={[{ required: true, message: 'Bắt buộc' }]}>
+            <Input placeholder="VD: Nhân sự" maxLength={100} />
+          </Form.Item>
+          <Form.Item name="description" label="Mô tả">
+            <Input.TextArea rows={3} placeholder="Mô tả ngắn ..." />
+          </Form.Item>
+          <Form.Item name="isActive" label="Hoạt động" valuePropName="checked">
+            <Switch checkedChildren="Có" unCheckedChildren="Tắt" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title={phaseModal?.phase ? `Sửa giai đoạn - ${phaseModal.phase.name}` : 'Thêm giai đoạn mới'}
+        open={!!phaseModal}
+        onCancel={() => setPhaseModal(null)}
+        onOk={submitPhase}
+        okText="Lưu"
+        cancelText="Hủy"
+        confirmLoading={phaseCreator.isPending || phaseUpdater.isPending}
+        destroyOnHidden
+      >
+        <Form
+          key={phaseModal?.phase?.id ?? 'new-phase'}
+          form={phaseForm}
+          layout="vertical"
+          preserve={false}
+          initialValues={{
+            code: phaseModal?.phase?.code,
+            name: phaseModal?.phase?.name,
+            sortOrder: phaseModal?.phase?.sortOrder ?? 0,
+            startDate: phaseModal?.phase?.startDate ?? '',
+            endDate: phaseModal?.phase?.endDate ?? '',
+          }}
+        >
+          <Form.Item name="code" label="Mã giai đoạn" rules={[{ required: true, message: 'Bắt buộc' }]}>
+            <Input placeholder="VD: PHASE-1" maxLength={50} disabled={!!phaseModal?.phase} />
+          </Form.Item>
+          <Form.Item name="name" label="Tên giai đoạn" rules={[{ required: true, message: 'Bắt buộc' }]}>
+            <Input placeholder="VD: Khởi tạo" maxLength={100} />
+          </Form.Item>
+          <Form.Item name="sortOrder" label="Thứ tự" rules={[{ type: 'number', min: 0, message: 'Phải >= 0' }]}>
+            <Input type="number" />
+          </Form.Item>
+          <Form.Item name="startDate" label="Ngày bắt đầu">
+            <Input type="date" />
+          </Form.Item>
+          <Form.Item name="endDate" label="Ngày kết thúc">
+            <Input type="date" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title={docStatusModal?.status ? `Sửa trạng thái - ${docStatusModal.status.label}` : 'Thêm trạng thái tài liệu'}
+        open={!!docStatusModal}
+        onCancel={() => setDocStatusModal(null)}
+        onOk={submitDocStatus}
+        okText="Lưu"
+        cancelText="Hủy"
+        confirmLoading={docStatusCreator.isPending || docStatusUpdater.isPending}
+        destroyOnHidden
+      >
+        <Form
+          key={docStatusModal?.status?.id ?? 'new-document-status'}
+          form={docStatusForm}
+          layout="vertical"
+          preserve={false}
+          initialValues={{
+            label: docStatusModal?.status?.label,
+            color: docStatusModal?.status?.color ?? '#1677ff',
+            sortOrder: docStatusModal?.status?.sortOrder ?? 0,
+            isActive: docStatusModal?.status?.isActive ?? true,
+          }}
+        >
+          <Form.Item name="label" label="Tên trạng thái" rules={[{ required: true, message: 'Bắt buộc' }]}>
+            <Input placeholder="VD: Đang kiểm tra" maxLength={50} />
+          </Form.Item>
+          <Form.Item name="color" label="Màu sắc">
+            <Input type="color" />
+          </Form.Item>
+          <Form.Item name="sortOrder" label="Thứ tự" rules={[{ type: 'number', min: 0, message: 'Phải >= 0' }]}>
+            <Input type="number" />
+          </Form.Item>
+          <Form.Item name="isActive" label="Kích hoạt" valuePropName="checked">
+            <Switch checkedChildren="Có" unCheckedChildren="Tắt" />
           </Form.Item>
         </Form>
       </Modal>

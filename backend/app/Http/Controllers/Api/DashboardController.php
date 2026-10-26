@@ -25,11 +25,11 @@ class DashboardController extends Controller
         $overdueTasks = collect(Helpers::overdue($tasks, 'due_date', 'status'))
             ->sortBy('due_date')
             ->values();
-        $pendingDocs = $documents->whereIn('status', ['reviewing', 'approval_pending'])->values();
+        $pendingDocs = $documents->whereIn('status', ['review_pending', 'reviewing', 'approval_pending'])->values();
 
         // ĐẦY ĐỦ mọi trạng thái (kể cả count=0), đúng thứ tự FE dùng để vẽ chart.
         $docByStatus = Helpers::countByStatuses($documents, 'status', [
-            'draft', 'reviewing', 'approval_pending', 'approved', 'published', 'obsolete', 'archived',
+            'planned', 'draft', 'review_pending', 'reviewing', 'approval_pending', 'approved', 'published', 'obsolete', 'archived',
         ]);
         $actionByStatus = Helpers::countByStatuses($actions, 'status', [
             'open', 'in_progress', 'blocked', 'overdue', 'pending_verification', 'verified', 'closed',
@@ -49,7 +49,7 @@ class DashboardController extends Controller
             'tasksByPhase' => $this->tasksByPhase($tasks),
             'tasksByPriority' => $this->tasksByPriority($tasks),
             'docByStatus' => $docByStatus,
-            'docPending' => $this->countOf($docByStatus, ['approval_pending']),
+            'docPending' => $this->countOf($docByStatus, ['review_pending', 'approval_pending']),
             'actionByStatus' => $actionByStatus,
             'actionOverdue' => $this->actionOverdue($actions),
             'overdueTasks' => TaskResource::collection($overdueTasks->take(8)),

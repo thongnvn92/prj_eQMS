@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Action;
+use App\Models\MasterPlanTask;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -178,27 +179,57 @@ class EndpointWorkflowTest extends TestCase
     {
         $this->tx(function () {
             $headers = $this->authAs('deputy', 'Deputy123!');
+            $oldStatus = (string) MasterPlanTask::find(5)->status;
 
+            // Tiến độ 100 ⇒ trạng thái suy ra = completed (Hoàn thành).
             $this->withHeaders($headers)->patchJson('/api/master-plan/tasks/5', [
-                'status' => 'in_progress',
-            ])->assertOk();
+                'progress' => 100,
+            ])->assertOk()->assertJsonPath('status', 'completed')->assertJsonPath('progress', 100);
 
             $this->assertDatabaseHas('activity_logs', [
                 'action' => 'status_change',
                 'entity' => 'master_plan_task',
                 'entity_id' => 5,
-                'old_status' => 'not_started',
-                'new_status' => 'in_progress',
+                'old_status' => $oldStatus,
+                'new_status' => 'completed',
             ]);
+        });
+    }
+
+    public function test_update_task_progress_zero_derives_not_started(): void
+    {
+        $this->tx(function () {
+            $headers = $this->authAs('deputy', 'Deputy123!');
+            $task = MasterPlanTask::find(5);
+            $task->update(['status' => 'in_progress', 'progress' => 40, 'due_date' => now()->addMonth()->format('Y-m-d')]);
+
+            // Tiến độ 0 + chưa quá hạn ⇒ Chưa thực hiện.
+            $this->withHeaders($headers)->patchJson('/api/master-plan/tasks/5', [
+                'progress' => 0,
+            ])->assertOk()->assertJsonPath('status', 'not_started');
+        });
+    }
+
+    public function test_update_task_overdue_progress_derives_delayed(): void
+    {
+        $this->tx(function () {
+            $headers = $this->authAs('deputy', 'Deputy123!');
+            $task = MasterPlanTask::find(5);
+            $task->update(['status' => 'not_started', 'progress' => 0, 'due_date' => now()->subDay()->format('Y-m-d')]);
+
+            // Quá deadline + chưa hoàn thành ⇒ Trễ hạn.
+            $this->withHeaders($headers)->patchJson('/api/master-plan/tasks/5', [
+                'progress' => 30,
+            ])->assertOk()->assertJsonPath('status', 'delayed');
         });
     }
 
     // ===================== DOCUMENTS – transition =====================
 
-    public function test_document_submit_draft_to_reviewing(): void
+    public function test_document_submit_draft_to_review_pending(): void
     {
         $this->tx(function () {
-            // deputy có document.submit; doc id 2 đang draft.
+            // deputy có document.submit; doc id 2 đang draft → review_pending (Chờ thẩm định).
             $headers = $this->authAs('deputy', 'Deputy123!');
 
             $response = $this->withHeaders($headers)->postJson('/api/documents/2/transition', [
@@ -206,22 +237,66 @@ class EndpointWorkflowTest extends TestCase
             ]);
 
             $response->assertOk();
-            $response->assertJsonPath('status', 'reviewing');
+            $response->assertJsonPath('status', 'review_pending');
             $response->assertJsonPath('code', 'QT-HCNS.02');
 
             // Ghi document_approvals + activity_log theo schema.
             $this->assertDatabaseHas('document_approvals', [
                 'document_id' => 2,
                 'action' => 'submit',
-                'step' => 'reviewing',
+                'step' => 'review_pending',
             ]);
             $this->assertDatabaseHas('activity_logs', [
                 'action' => 'submit',
                 'entity' => 'document',
                 'entity_id' => 2,
                 'old_status' => 'draft',
-                'new_status' => 'reviewing',
+                'new_status' => 'review_pending',
             ]);
+        });
+    }
+
+    public function test_document_full_pipeline_from_planned_to_published(): void
+    {
+        $this->tx(function () {
+            // Dùng 1 tài khoản cho cả pipeline (super_admin đủ mọi quyền) –
+            // tuân thủ quy ước test: guard Sanctum cache user trong cùng app instance.
+            $admin = $this->authAs('admin', 'Admin123!');
+
+            // 1. Tạo tài liệu → planned (Chưa dự thảo / dự kiến).
+            $created = $this->withHeaders($admin)->postJson('/api/documents', [
+                'code' => 'PIPE-'.uniqid(),
+                'name' => 'Tài liệu kiểm thử workflow đầy đủ',
+                'docType' => 'procedure',
+            ])->assertStatus(201)->assertJsonPath('status', 'planned');
+            $id = $created->json('id');
+
+            // 2. planned → draft (Bắt đầu soạn thảo – document.submit).
+            $this->withHeaders($admin)->postJson("/api/documents/{$id}/transition", ['action' => 'start_draft'])
+                ->assertOk()->assertJsonPath('status', 'draft');
+
+            // 3. draft → review_pending (Trình thẩm định).
+            $this->withHeaders($admin)->postJson("/api/documents/{$id}/transition", ['action' => 'submit'])
+                ->assertOk()->assertJsonPath('status', 'review_pending');
+
+            // 4. review_pending → reviewing (Bắt đầu thẩm định – document.review).
+            $this->withHeaders($admin)->postJson("/api/documents/{$id}/transition", ['action' => 'start_review'])
+                ->assertOk()->assertJsonPath('status', 'reviewing');
+
+            // 5. reviewing → approval_pending (Trình phê duyệt).
+            $this->withHeaders($admin)->postJson("/api/documents/{$id}/transition", ['action' => 'review'])
+                ->assertOk()->assertJsonPath('status', 'approval_pending');
+
+            // 6. approval_pending → approved (Phê duyệt – document.approve).
+            $this->withHeaders($admin)->postJson("/api/documents/{$id}/transition", ['action' => 'approve'])
+                ->assertOk()->assertJsonPath('status', 'approved');
+
+            // 7. approved → published (Ban hành, V0.x → V1.0).
+            $this->withHeaders($admin)->postJson("/api/documents/{$id}/transition", ['action' => 'publish'])
+                ->assertOk()
+                ->assertJsonPath('status', 'published')
+                ->assertJsonPath('currentVersion', 'V1.0')
+                ->assertJsonPath('workflowStep', 7);
         });
     }
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { App, Button, Card, Checkbox, Divider, Form, Input, Modal, Select, Space, Table, Tag, Typography, Upload } from 'antd';
+import { App, AutoComplete, Button, Card, Checkbox, Divider, Form, Input, Modal, Select, Space, Table, Tag, Typography, Upload } from 'antd';
 import { DeleteOutlined, DownloadOutlined, EditOutlined, EyeOutlined, PlusOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons';
 import { useAuth } from '../auth/AuthContext';
 import { useCreateDocument, useDeleteDocument, useDocuments, useLookups, useNewDocumentVersion, useTransitionDocument, useUpdateDocument, useUploadDocumentFile } from '../hooks/queries';
@@ -10,7 +10,9 @@ import type { Permission } from '../auth/permissions';
 import type { DocAction, DocApproval, DocumentFile, DocumentItem, DocumentStatus, DocumentType, DocVersion } from '../mock/types';
 
 const ACTION_LABEL: Record<DocAction, string> = {
+  start_draft: 'Bắt đầu soạn thảo',
   submit: 'Gửi thẩm định',
+  start_review: 'Bắt đầu thẩm định',
   review: 'Trình phê duyệt',
   approve: 'Phê duyệt',
   reject: 'Từ chối',
@@ -25,7 +27,9 @@ const ACTION_LABEL: Record<DocAction, string> = {
   };
 
 const WORKFLOW: Record<string, { action: DocAction; perm: Permission; danger?: boolean }[]> = {
+  planned: [{ action: 'start_draft', perm: 'document.submit' }],
   draft: [{ action: 'submit', perm: 'document.submit' }],
+  review_pending: [{ action: 'start_review', perm: 'document.review' }],
   reviewing: [
     { action: 'review', perm: 'document.review' },
     { action: 'reject', perm: 'document.approve', danger: true },
@@ -222,7 +226,6 @@ export default function DocumentsPage() {
   }, [data, keyword, status, docType, deptFilter, sortField]);
 
   const openAction = (doc: DocumentItem, action: DocAction) => {
-    form.resetFields();
     setPending({ doc, action });
   };
 
@@ -250,34 +253,21 @@ export default function DocumentsPage() {
 
   const openEdit = (doc: DocumentItem) => setEditing(doc);
 
-  // Load dữ liệu hiện tại lên form khi mở modal (đảm bảo "Sửa tài liệu" hiển thị đúng data kể cả khi
-  // Modal dùng destroyOnClose). Create → reset + mặc định tắt auto-version.
-  useEffect(() => {
-    if (editing) {
-      docForm.resetFields();
-      docForm.setFieldsValue({
-        code: editing.code, name: editing.name, docType: editing.docType,
-        departmentId: editing.departmentId, ownerId: editing.ownerId,
-        description: editing.description, autoVersion: editing.autoVersion ?? false,
-        version: undefined, changeSummary: undefined,
-      });
-    } else if (showCreate) {
-      docForm.resetFields();
-      docForm.setFieldsValue({ autoVersion: false });
-    }
-  }, [editing, showCreate, docForm]);
-
   const submitDoc = () => {
     docForm
       .validateFields()
       .then((v) => {
+        const ownerMatch = (lookups?.people ?? []).find(
+          (p) => p.fullName.toLowerCase() === String(v.ownerId ?? '').toLowerCase(),
+        );
+        const resolvedOwnerId = ownerMatch ? ownerMatch.id : (typeof v.ownerId === 'number' ? v.ownerId : undefined);
         if (editing) {
           updater.mutate(
             {
               id: editing.id,
               patch: {
                 code: v.code, name: v.name, docType: v.docType,
-                departmentId: v.departmentId, ownerId: v.ownerId,
+                departmentId: v.departmentId, ownerId: resolvedOwnerId ?? null, ownerName: String(v.ownerId ?? '').trim() || undefined,
                 description: v.description, changeSummary: v.changeSummary,
                 autoVersion: v.autoVersion,
                 // Tắt auto → gửi version thủ công; bật auto → BE tự tăng.
@@ -296,7 +286,7 @@ export default function DocumentsPage() {
           creator.mutate(
             {
               code: v.code, name: v.name, docType: v.docType,
-              departmentId: v.departmentId, ownerId: v.ownerId,
+              departmentId: v.departmentId, ownerId: resolvedOwnerId ?? null, ownerName: String(v.ownerId ?? '').trim() || undefined,
               description: v.description, changeSummary: v.changeSummary,
               autoVersion: v.autoVersion,
             },
@@ -331,7 +321,7 @@ export default function DocumentsPage() {
       render: (_: unknown, d: DocumentItem) => DOC_TYPE_LABEL[d.docType] ?? d.docType,
     },
     { title: 'Phòng', key: 'dept', width: 180, ellipsis: true, render: (_: unknown, d: DocumentItem) => deptOf(d.departmentId) },
-    { title: 'Chủ trì', key: 'owner', width: 140, render: (_: unknown, d: DocumentItem) => nameOf(d.ownerId) },
+    { title: 'Chủ trì', key: 'owner', width: 140, render: (_: unknown, d: DocumentItem) => d.ownerName || nameOf(d.ownerId) },
     {
       title: 'Trạng thái',
       key: 'status',
@@ -551,14 +541,35 @@ export default function DocumentsPage() {
       <Modal
         title={editing ? `Sửa tài liệu – ${editing.code}` : 'Thêm tài liệu mới'}
         open={showCreate || !!editing}
+        width={820}
+        destroyOnHidden={false}
+        afterOpenChange={(open) => {
+          if (!open) return;
+          if (editing) {
+            const ownerPerson = (lookups?.people ?? []).find((p) => p.id === editing.ownerId);
+            const ownerDisplay = editing.ownerName || ownerPerson?.fullName || (editing.ownerId != null ? String(editing.ownerId) : undefined);
+            const currentVer = editing.versions?.find((v) => v.version === editing.currentVersion) ?? editing.versions?.[editing.versions.length - 1];
+            docForm.setFieldsValue({
+              code: editing.code, name: editing.name, docType: editing.docType,
+              departmentId: editing.departmentId,
+              ownerId: ownerDisplay as any,
+              description: editing.description,
+              changeSummary: currentVer?.changeSummary,
+              autoVersion: editing.autoVersion ?? false,
+              version: undefined,
+            });
+          } else if (showCreate) {
+            docForm.resetFields();
+            docForm.setFieldsValue({ autoVersion: false });
+          }
+        }}
         onCancel={() => { setShowCreate(false); setEditing(null); }}
         onOk={submitDoc}
         okText="Lưu"
         cancelText="Hủy"
         confirmLoading={creator.isPending || updater.isPending}
-        destroyOnClose
       >
-        <Form form={docForm} layout="vertical" preserve={false}>
+        <Form form={docForm} layout="vertical">
           <Form.Item name="code" label="Mã tài liệu" rules={[{ required: true, message: 'Bắt buộc nhập mã tài liệu' }]}>
             <Input placeholder="VD: QT-HCNS.03" maxLength={50} />
           </Form.Item>
@@ -579,10 +590,13 @@ export default function DocumentsPage() {
             />
           </Form.Item>
           <Form.Item name="ownerId" label="Người biên soạn / chủ trì">
-            <Select
+            <AutoComplete
               allowClear
-              placeholder="Chọn người"
-              options={(lookups?.people ?? []).map((p) => ({ value: p.id, label: p.fullName }))}
+              placeholder="Chọn hoặc nhập tên người biên soạn"
+              options={(lookups?.people ?? []).map((p) => ({ value: p.fullName, label: p.fullName }))}
+              filterOption={(input, option) =>
+                (option?.label as string)?.toLowerCase().includes(input.toLowerCase()) ?? false
+              }
             />
           </Form.Item>
           <Form.Item name="description" label="Mô tả">
@@ -621,7 +635,10 @@ export default function DocumentsPage() {
         okButtonProps={{ danger: pending?.action === 'reject' }}
         cancelText="Hủy"
         confirmLoading={transition.isPending}
-        destroyOnClose
+        destroyOnHidden
+        afterOpenChange={(open) => {
+          if (open) form.resetFields();
+        }}
       >
         <Form form={form} layout="vertical">
           <Form.Item
@@ -671,7 +688,7 @@ export default function DocumentsPage() {
         okText="Tạo phiên bản"
         cancelText="Hủy"
         confirmLoading={newVersion.isPending}
-        destroyOnClose
+        destroyOnHidden
       >
         <Typography.Paragraph type="secondary">{versionModal.message}</Typography.Paragraph>
         <Form form={versionForm} layout="vertical" preserve={false}>

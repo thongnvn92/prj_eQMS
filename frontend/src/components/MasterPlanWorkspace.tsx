@@ -3,12 +3,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAppDispatch } from '../store/hooks';
 import { Button, Card, Select, Space, Typography, message } from 'antd';
-import { EditOutlined, PlusOutlined } from '@ant-design/icons';
+import { EditOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useAuth } from '../auth/AuthContext';
 import { useLookups, useMasterPlan } from '../hooks/queries';
 import {
   updateTask, updateTaskProgress, deleteTask, reorderTasks,
-  createTask, createMasterPlan, updateMasterPlan,
+  createTask, createMasterPlan, updateMasterPlan, deleteMasterPlan,
 } from '../store/slices/masterPlanSlice';
 import {
   expandVisibleRows, flattenVisibleTree, phasesOfPlan, tasksOfPlan,
@@ -81,6 +81,16 @@ export default function MasterPlanWorkspace() {
     saveObject(EXPANDED_KEY, expandedIds);
   }, [expandedIds]);
 
+  // ---- Nhóm công việc theo giai đoạn (mỗi nhóm là một bảng cây riêng) ----
+  const groupedByPhase = useMemo(() => {
+    return phases.map((ph) => {
+      const phaseTasks = tasks.filter((t) => t.phaseId === ph.id);
+      const phaseRows = flattenVisibleTree(phaseTasks, expandedIds, {});
+      const phaseVisible = expandVisibleRows(phaseRows, expandedIds);
+      const phaseExpandable = new Set(phaseRows.filter((r) => r.childrenIds.length > 0).map((r) => r.id));
+      return { phase: ph, rows: phaseVisible, expandableIds: phaseExpandable };
+    });
+  }, [phases, tasks, expandedIds]);
   const allRows = useMemo(() => flattenVisibleTree(tasks, expandedIds, {}), [tasks, expandedIds]);
   const visibleRows = useMemo(() => expandVisibleRows(allRows, expandedIds), [allRows, expandedIds]);
   const expandableIds = useMemo(
@@ -107,12 +117,13 @@ export default function MasterPlanWorkspace() {
       name: editingTask.name,
       phaseId: editingTask.phaseId,
       parentId: editingTask.parentId,
-      ownerId: editingTask.ownerId,
+      ownerId: (editingTask.ownerName || people.find((p) => p.id === editingTask.ownerId)?.fullName || (editingTask.ownerId != null ? String(editingTask.ownerId) : undefined)) as any,
       departmentId: editingTask.departmentId,
       priority: editingTask.priority,
       startDate: editingTask.startDate,
       dueDate: editingTask.dueDate,
       note: editingTask.note,
+      status: editingTask.status,
     };
   }, [editingTask]);
 
@@ -146,10 +157,19 @@ export default function MasterPlanWorkspace() {
   }, []);
 
   const submitTask = useCallback((values: TaskFormValues) => {
+    const ownerMatch = (lookups?.people ?? []).find(
+      (p) => p.fullName.toLowerCase() === String(values.ownerId ?? '').toLowerCase(),
+    );
+    const resolvedOwnerId = ownerMatch ? ownerMatch.id : (typeof values.ownerId === 'number' ? values.ownerId : null);
+    const patch = {
+      ...values,
+      ownerId: resolvedOwnerId,
+      ownerName: String(values.ownerId ?? '').trim() || undefined,
+    };
     if (editingId != null) {
-      dispatch(updateTask({ id: editingId, patch: values }));
+      dispatch(updateTask({ id: editingId, patch }));
     } else {
-      dispatch(createTask(values));
+      dispatch(createTask(patch));
       // Tự mở nhánh cha để thấy ngay công việc con vừa tạo.
       if (values.parentId != null) {
         setExpandedIds((prev) => [...new Set([...prev, values.parentId as number])]);
@@ -164,6 +184,13 @@ export default function MasterPlanWorkspace() {
       .unwrap()
       .then(() => message.success(`Đã xoá công việc ${row.code}`))
       .catch(() => message.error('Không xoá được công việc.'));
+  }, [dispatch]);
+
+  const removePlan = useCallback((plan: MasterPlan) => {
+    dispatch(deleteMasterPlan(plan.id))
+      .unwrap()
+      .then(() => message.success(`Đã xoá kế hoạch ${plan.code}`))
+      .catch(() => message.error('Không xoá được kế hoạch.'));
   }, [dispatch]);
 
   /** Owner (hoặc master_plan.update) cập nhật tiến độ ngay trên bảng. */
@@ -258,6 +285,11 @@ export default function MasterPlanWorkspace() {
                 Sửa kế hoạch
               </Button>
             )}
+            {can('master_plan.delete') && selectedPlan && (
+              <Button danger icon={<DeleteOutlined />} onClick={() => removePlan(selectedPlan)}>
+                Xóa kế hoạch
+              </Button>
+            )}
           </Space>
         </div>
         <div className='eqms-mp-toolbar-row eqms-mp-toolbar-actions'>
@@ -270,26 +302,32 @@ export default function MasterPlanWorkspace() {
         </div>
       </Card>
 
-      <TaskTreeTable
-        rows={visibleRows}
-        expandableIds={expandableIds}
-        expandedIds={expandedIds}
-        phases={phases}
-        people={people}
-        isLoading={isLoading}
-        canCreate={can('master_plan.create')}
-        canEdit={can('master_plan.update')}
-        canDelete={can('master_plan.delete')}
-        canProgress={(row) => row.ownerId === user?.id || can('master_plan.update')}
-        onToggle={toggleExpand}
-        onEdit={openEdit}
-        onDelete={removeTask}
-        onSub={openSub}
-        onReorderRoot={reorderRoot}
-        onProgress={changeProgress}
-        onExpandAll={expandAll}
-        onCollapseAll={collapseAll}
-      />
+      {groupedByPhase
+        .filter((g) => g.rows.length > 0)
+        .map((g) => (
+          <Card key={g.phase.id} size='small' title={`${g.phase.code} · ${g.phase.name}`} style={{ marginBottom: 12 }}>
+            <TaskTreeTable
+              rows={g.rows}
+              expandableIds={g.expandableIds}
+              expandedIds={expandedIds}
+              phases={phases}
+              people={people}
+              isLoading={isLoading}
+              canCreate={can('master_plan.create')}
+              canEdit={can('master_plan.update')}
+              canDelete={can('master_plan.delete')}
+              canProgress={(row) => row.ownerId === user?.id || can('master_plan.update')}
+              onToggle={toggleExpand}
+              onEdit={openEdit}
+              onDelete={removeTask}
+              onSub={openSub}
+              onReorderRoot={reorderRoot}
+              onProgress={changeProgress}
+              onExpandAll={expandAll}
+              onCollapseAll={collapseAll}
+            />
+          </Card>
+        ))}
 
       <TaskFormModal
         open={showTaskForm}
@@ -297,6 +335,7 @@ export default function MasterPlanWorkspace() {
         editingId={editingId}
         phases={phases}
         people={people}
+        departments={lookups?.departments ?? []}
         tasks={tasks}
         initialValues={editingId != null ? editFormValues : createDefaults}
         onCancel={closeTaskForm}

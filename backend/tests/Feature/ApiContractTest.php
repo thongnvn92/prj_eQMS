@@ -82,7 +82,7 @@ class ApiContractTest extends TestCase
         }
         if (! empty($body['phases'][0])) {
             $this->assertSame(
-                ['id', 'code', 'name', 'startDate', 'endDate', 'masterPlanId'],
+                ['id', 'code', 'name', 'startDate', 'endDate', 'masterPlanId', 'sortOrder'],
                 array_keys($body['phases'][0])
             );
         }
@@ -102,7 +102,7 @@ class ApiContractTest extends TestCase
 
         $task = $body['tasks'][0];
         $this->assertSame(
-            ['id', 'code', 'name', 'phaseId', 'parentId', 'sortOrder', 'ownerId', 'departmentId', 'priority', 'status', 'progress', 'startDate', 'dueDate', 'result', 'note'],
+            ['id', 'code', 'name', 'phaseId', 'parentId', 'sortOrder', 'ownerId', 'ownerName', 'departmentId', 'priority', 'status', 'progress', 'startDate', 'dueDate', 'result', 'note'],
             array_keys($task)
         );
         $this->assertContains($task['status'], ['not_started', 'in_progress', 'blocked', 'delayed', 'completed', 'cancelled']);
@@ -121,7 +121,7 @@ class ApiContractTest extends TestCase
 
         $doc = $body[0];
         $this->assertSame(
-            ['id', 'code', 'name', 'docType', 'departmentId', 'ownerId', 'currentVersion', 'status', 'statusUpdatedAt', 'autoVersion', 'createdAt', 'updatedAt', 'workflowStep', 'relatedTaskId', 'description', 'effectiveDate', 'versions', 'approvals', 'files'],
+            ['id', 'code', 'name', 'docType', 'departmentId', 'ownerId', 'ownerName', 'currentVersion', 'status', 'statusUpdatedAt', 'autoVersion', 'createdAt', 'updatedAt', 'workflowStep', 'relatedTaskId', 'description', 'effectiveDate', 'versions', 'approvals', 'files'],
             array_keys($doc)
         );
         $this->assertIsArray($doc['versions']);

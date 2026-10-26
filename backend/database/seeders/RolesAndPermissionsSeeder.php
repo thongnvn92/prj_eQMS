@@ -17,7 +17,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'action.view', 'action.create', 'action.update', 'action.verify', 'action.close', 'action.delete',
             'risk.view', 'risk.create', 'risk.update', 'risk.evaluate', 'risk.close', 'risk.delete',
             'opportunity.view', 'opportunity.create', 'opportunity.update', 'opportunity.evaluate', 'opportunity.close', 'opportunity.delete',
-            'department.view',
+            'department.view', 'department.manage',
         ],
         'iso_deputy' => [
             'dashboard.view',
@@ -111,7 +111,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'issue.create',
             'user.view', 'user.create', 'user.update',
             'role.view', 'role.manage',
-            'department.view',
+            'department.view', 'department.manage',
+            'document_status.manage',
         ];
 
         foreach ($moduleAction as $code) {

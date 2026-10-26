@@ -7,7 +7,7 @@ export type TaskStatus =
 export type Priority = 'critical' | 'high' | 'medium' | 'low';
 
 export type DocumentStatus =
-  | 'draft' | 'reviewing' | 'approval_pending' | 'approved' | 'published' | 'obsolete' | 'archived';
+  | 'planned' | 'draft' | 'review_pending' | 'reviewing' | 'approval_pending' | 'approved' | 'published' | 'obsolete' | 'archived';
 
 export type DocumentType =
   | 'policy' | 'manual' | 'regulation' | 'procedure' | 'work_instruction' | 'form' | 'record' | 'standard';
@@ -18,12 +18,31 @@ export type ActionStatus =
 export type ActionSource =
   | 'audit_finding' | 'ncr' | 'complaint' | 'risk' | 'opportunity' | 'management' | 'internal_audit' | 'other';
 
-export type DocAction = 'submit' | 'review' | 'approve' | 'reject' | 'publish';
+export type DocAction =
+  | 'start_draft'
+  | 'submit'
+  | 'start_review'
+  | 'review'
+  | 'approve'
+  | 'reject'
+  | 'publish';
 
 export interface Department {
   id: number;
   code: string;
   name: string;
+  description?: string;
+  isActive?: boolean;
+}
+
+export interface DocumentStatusItem {
+  id: number;
+  code: string;
+  label: string;
+  color?: string;
+  sortOrder?: number;
+  isActive?: boolean;
+  isSystem?: boolean;
 }
 
 export interface User {
@@ -45,6 +64,8 @@ export interface Phase {
   endDate: string;
   /** CR Master Plan ISO: phase thuộc Master Plan nào (backend PhaseResource). */
   masterPlanId?: number;
+  sortOrder?: number;
+  taskCount?: number;
 }
 
 /** Kế hoạch tổng thể (một master plan có nhiều phase + task). */
@@ -70,6 +91,7 @@ export interface Task {
   parentId?: number | null;
   sortOrder?: number;
   ownerId: number | null;
+  ownerName?: string | null;
   departmentId: number | null;
   priority: Priority;
   status: TaskStatus;
@@ -124,6 +146,7 @@ export interface DocumentItem {
   docType: DocumentType;
   departmentId: number;
   ownerId: number;
+  ownerName?: string | null;
   currentVersion: string;
   status: DocumentStatus;
   statusUpdatedAt?: string;
@@ -300,6 +323,8 @@ export interface RoleItem {
 
 export interface MockDb {
   departments: Department[];
+  /** Trạng thái tài liệu tùy chỉnh (do admin tạo); 9 trạng thái chuẩn nằm ở STANDARD_DOC_STATUSES. */
+  documentsStatuses: DocumentStatusItem[];
   users: User[];
   roles: RoleItem[];
   phases: Phase[];

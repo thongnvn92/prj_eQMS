@@ -142,6 +142,35 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/risk-dashboard', RiskDashboardController::class)
         ->middleware('permission:risk.view|opportunity.view');
 
+    // ---------- CRUD dữ liệu quản trị (master data) ----------
+    // Nhóm công việc (Giai đoạn) – quyền theo module master_plan.
+    Route::get('/admin/phases', [AdminController::class, 'phases'])
+        ->middleware('permission:master_plan.view');
+    Route::post('/admin/phases', [AdminController::class, 'storePhase'])
+        ->middleware('permission:master_plan.create');
+    Route::patch('/admin/phases/{id}', [AdminController::class, 'updatePhase'])
+        ->middleware('permission:master_plan.update')->whereNumber('id');
+    Route::delete('/admin/phases/{id}', [AdminController::class, 'destroyPhase'])
+        ->middleware('permission:master_plan.delete')->whereNumber('id');
+
+    // Phòng ban.
+    Route::get('/admin/departments', [AdminController::class, 'departments'])
+        ->middleware('permission:department.view');
+    Route::middleware('permission:department.manage')->group(function () {
+        Route::post('/admin/departments', [AdminController::class, 'storeDepartment']);
+        Route::patch('/admin/departments/{id}', [AdminController::class, 'updateDepartment'])->whereNumber('id');
+        Route::delete('/admin/departments/{id}', [AdminController::class, 'destroyDepartment'])->whereNumber('id');
+    });
+
+    // Trạng thái tài liệu (dictionary do admin quản lý – 9 trạng thái workflow là system).
+    Route::get('/admin/document-statuses', [AdminController::class, 'documentStatuses'])
+        ->middleware('permission:document.view');
+    Route::middleware('permission:document_status.manage')->group(function () {
+        Route::post('/admin/document-statuses', [AdminController::class, 'storeDocumentStatus']);
+        Route::patch('/admin/document-statuses/{id}', [AdminController::class, 'updateDocumentStatus'])->whereNumber('id');
+        Route::delete('/admin/document-statuses/{id}', [AdminController::class, 'destroyDocumentStatus'])->whereNumber('id');
+    });
+
     Route::middleware('permission:user.view')->group(function () {
         Route::get('/admin/users', [AdminController::class, 'users']);
         Route::get('/admin/roles', [AdminController::class, 'roles']);

@@ -48,16 +48,6 @@ export default function ActionsPage() {
   }, [data, keyword, status]);
 
   const openModal = (mode: 'update' | 'close', item: ActionItem) => {
-    form.setFieldsValue(
-      mode === 'update'
-        ? {
-            status: item.status, progress: item.progress, result: item.result ?? '',
-            title: item.title, source: item.source,
-            ownerId: item.ownerId, departmentId: item.departmentId,
-            dueDate: String(item.dueDate).slice(0, 10),
-          }
-        : { evidence: item.evidence ?? '' },
-    );
     setModal({ mode, item });
   };
 
@@ -253,7 +243,25 @@ export default function ActionsPage() {
         okText={modal?.mode === 'close' ? 'Đóng Action' : 'Lưu'}
         cancelText="Hủy"
         confirmLoading={update.isPending}
-        destroyOnClose
+        destroyOnHidden
+        afterOpenChange={(open) => {
+          if (!open || !modal) return;
+          form.resetFields();
+          form.setFieldsValue(
+            modal.mode === 'update'
+              ? {
+                  status: modal.item.status,
+                  progress: modal.item.progress,
+                  result: modal.item.result ?? '',
+                  title: modal.item.title,
+                  source: modal.item.source,
+                  ownerId: modal.item.ownerId,
+                  departmentId: modal.item.departmentId,
+                  dueDate: String(modal.item.dueDate).slice(0, 10),
+                }
+              : { evidence: modal.item.evidence ?? '' },
+          );
+        }}
       >
         <Form form={form} layout="vertical">
           {modal?.mode === 'update' ? (
@@ -314,7 +322,7 @@ export default function ActionsPage() {
         okText="Tạo"
         cancelText="Hủy"
         confirmLoading={create.isPending}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={createForm} layout="vertical" preserve={false}>
           <Form.Item name="code" label="Mã Action" rules={[{ required: true, message: 'Bắt buộc nhập mã' }]}>
@@ -357,4 +365,3 @@ export default function ActionsPage() {
     </div>
   );
 }
-

@@ -147,7 +147,7 @@ class DataImportTest extends TestCase
 
             $doc = DB::table('documents')->where('code', 'IMP-D1')->first();
             $this->assertNotNull($doc);
-            $this->assertSame('draft', $doc->status);
+            $this->assertSame('planned', $doc->status);
             $this->assertSame('V0.1', $doc->current_version);
             $this->assertSame(1, (int) $doc->workflow_step);
             $this->assertSame($adminId, (int) $doc->owner_id); // fallback owner = người tạo

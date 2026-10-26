@@ -10,12 +10,12 @@ import { fetchDashboard } from '../store/slices/dashboardSlice';
 import { fetchDocuments, transitionDocument, createDocument, importDocuments, updateDocument, deleteDocument, uploadDocumentFile, newDocumentVersion, toggleAutoVersion } from '../store/slices/documentsSlice';
 import { fetchLookups } from '../store/slices/lookupsSlice';
 import { fetchMasterPlan, updateTask, updateTaskProgress, createTask, importTasks, deleteTask, reorderTasks, createMasterPlan, updateMasterPlan, deleteMasterPlan } from '../store/slices/masterPlanSlice';
-import { fetchAdmin, resetDemo, createUser, updateUser, deleteUser, createRole, updateRole, deleteRole } from '../store/slices/adminSlice';
+import { fetchAdmin, resetDemo, createUser, updateUser, deleteUser, createRole, updateRole, deleteRole, fetchDepartments, fetchPhases, fetchDocumentStatuses, createDepartment, updateDepartment, deleteDepartment, createPhase, updatePhase, deletePhase, createDocumentStatus, updateDocumentStatus, deleteDocumentStatus } from '../store/slices/adminSlice';
 import { fetchRisks, createRisk, updateRisk, evaluateRisk, deleteRisk, fetchRiskDetail } from '../store/slices/risksSlice';
 import { fetchOpportunities, createOpportunity, updateOpportunity, evaluateOpportunity, deleteOpportunity } from '../store/slices/opportunitiesSlice';
 import { fetchRiskDashboard } from '../store/slices/riskDashboardSlice';
 import type {
-  ActionItem, DashboardStats, DocAction, DocumentItem, MasterPlan, OpportunityItem, Phase,
+  ActionItem, DashboardStats, Department, DocAction, DocumentItem, DocumentStatusItem, MasterPlan, OpportunityItem, Phase,
   RiskAssessmentItem, RiskDashboardStats, RiskItem, Task, TaskStatus,
 } from '../mock/types';
 
@@ -51,11 +51,12 @@ export function useLookups(): QueryResult<{
   people: { id: number; fullName: string }[];
   departments: { id: number; code: string; name: string }[];
   phases: { id: number; code: string; name: string; startDate: string; endDate: string }[];
+  documentStatuses: { id: number; code: string; label: string; color?: string; sortOrder?: number; isActive?: boolean; isSystem?: boolean }[];
 }> {
   const dispatch = useAppDispatch();
-  const { people, departments, phases, status } = useAppSelector((s) => s.lookups);
+  const { people, departments, phases, documentStatuses, status } = useAppSelector((s) => s.lookups);
   useFetchOnce(status, status === 'succeeded', () => void dispatch(fetchLookups()));
-  return { data: status === 'succeeded' ? { people, departments, phases } : undefined, isLoading: status === 'loading', status };
+  return { data: status === 'succeeded' ? { people, departments, phases, documentStatuses } : undefined, isLoading: status === 'loading', status };
 }
 
 export function useDashboard(): QueryResult<DashboardStats> {
@@ -172,7 +173,7 @@ export function useDeleteAction(): Mutation<number> {
 // ---------- Document Control mutations ----------
 export function useCreateDocument(): Mutation<{
   code: string; name: string; docType: DocumentItem['docType'];
-  departmentId?: number | null; ownerId?: number | null;
+  departmentId?: number | null; ownerId?: number | null; ownerName?: string | null;
   relatedTaskId?: number | null; description?: string; changeSummary?: string;
   autoVersion?: boolean;
 }> {
@@ -190,7 +191,7 @@ export function useImportDocuments(): Mutation<Parameters<typeof api.importDocum
 export function useUpdateDocument(): Mutation<{
   id: number; patch: {
     code?: string; name?: string; docType?: DocumentItem['docType'];
-    departmentId?: number | null; ownerId?: number | null;
+    departmentId?: number | null; ownerId?: number | null; ownerName?: string | null;
     relatedTaskId?: number | null; description?: string; changeSummary?: string;
     autoVersion?: boolean; version?: string;
   };
@@ -271,6 +272,82 @@ export function useResetDemo(): Mutation<void> {
   const dispatch = useAppDispatch();
   const resetting = useAppSelector((s) => s.admin.resetting);
   return { isPending: resetting, mutate: (_input, callbacks) => dispatch(resetDemo()).unwrap().then((result) => callbacks?.onSuccess?.(result)).catch((e) => callbacks?.onError?.(e)) };
+}
+
+// ---------- Admin master-data (departments / phases / document statuses) ----------
+export function useAdminDepartments(): QueryResult<Department[]> {
+  const dispatch = useAppDispatch();
+  const { departments, departmentsStatus } = useAppSelector((s) => s.admin);
+  useFetchOnce(departmentsStatus, departmentsStatus === 'succeeded', () => void dispatch(fetchDepartments()));
+  return { data: departmentsStatus === 'succeeded' ? departments : undefined, isLoading: departmentsStatus === 'loading', status: departmentsStatus };
+}
+
+export function useAdminPhases(): QueryResult<Phase[]> {
+  const dispatch = useAppDispatch();
+  const { phases, phasesStatus } = useAppSelector((s) => s.admin);
+  useFetchOnce(phasesStatus, phasesStatus === 'succeeded', () => void dispatch(fetchPhases()));
+  return { data: phasesStatus === 'succeeded' ? phases : undefined, isLoading: phasesStatus === 'loading', status: phasesStatus };
+}
+
+export function useAdminDocumentStatuses(): QueryResult<DocumentStatusItem[]> {
+  const dispatch = useAppDispatch();
+  const { documentStatuses, documentStatusesStatus } = useAppSelector((s) => s.admin);
+  useFetchOnce(documentStatusesStatus, documentStatusesStatus === 'succeeded', () => void dispatch(fetchDocumentStatuses()));
+  return { data: documentStatusesStatus === 'succeeded' ? documentStatuses : undefined, isLoading: documentStatusesStatus === 'loading', status: documentStatusesStatus };
+}
+
+export function useCreateDepartment(): Mutation<Parameters<typeof api.createDepartment>[0]> {
+  const dispatch = useAppDispatch();
+  const saving = useAppSelector((s) => s.admin.saving);
+  return { isPending: saving, mutate: (input, callbacks) => dispatch(createDepartment(input)).unwrap().then((result) => callbacks?.onSuccess?.(result)).catch((e) => callbacks?.onError?.(e)) };
+}
+
+export function useUpdateDepartment(): Mutation<{ id: number; patch: Parameters<typeof api.updateDepartment>[1] }> {
+  const dispatch = useAppDispatch();
+  const saving = useAppSelector((s) => s.admin.saving);
+  return { isPending: saving, mutate: (input, callbacks) => dispatch(updateDepartment(input)).unwrap().then((result) => callbacks?.onSuccess?.(result)).catch((e) => callbacks?.onError?.(e)) };
+}
+
+export function useDeleteDepartment(): Mutation<number> {
+  const dispatch = useAppDispatch();
+  const saving = useAppSelector((s) => s.admin.saving);
+  return { isPending: saving, mutate: (id, callbacks) => dispatch(deleteDepartment(id)).unwrap().then((result) => callbacks?.onSuccess?.(result)).catch((e) => callbacks?.onError?.(e)) };
+}
+
+export function useCreatePhase(): Mutation<Parameters<typeof api.createPhase>[0]> {
+  const dispatch = useAppDispatch();
+  const saving = useAppSelector((s) => s.admin.saving);
+  return { isPending: saving, mutate: (input, callbacks) => dispatch(createPhase(input)).unwrap().then((result) => callbacks?.onSuccess?.(result)).catch((e) => callbacks?.onError?.(e)) };
+}
+
+export function useUpdatePhase(): Mutation<{ id: number; patch: Parameters<typeof api.updatePhase>[1] }> {
+  const dispatch = useAppDispatch();
+  const saving = useAppSelector((s) => s.admin.saving);
+  return { isPending: saving, mutate: (input, callbacks) => dispatch(updatePhase(input)).unwrap().then((result) => callbacks?.onSuccess?.(result)).catch((e) => callbacks?.onError?.(e)) };
+}
+
+export function useDeletePhase(): Mutation<number> {
+  const dispatch = useAppDispatch();
+  const saving = useAppSelector((s) => s.admin.saving);
+  return { isPending: saving, mutate: (id, callbacks) => dispatch(deletePhase(id)).unwrap().then((result) => callbacks?.onSuccess?.(result)).catch((e) => callbacks?.onError?.(e)) };
+}
+
+export function useCreateDocumentStatus(): Mutation<Parameters<typeof api.createDocumentStatus>[0]> {
+  const dispatch = useAppDispatch();
+  const saving = useAppSelector((s) => s.admin.saving);
+  return { isPending: saving, mutate: (input, callbacks) => dispatch(createDocumentStatus(input)).unwrap().then((result) => callbacks?.onSuccess?.(result)).catch((e) => callbacks?.onError?.(e)) };
+}
+
+export function useUpdateDocumentStatus(): Mutation<{ id: number; patch: Parameters<typeof api.updateDocumentStatus>[1] }> {
+  const dispatch = useAppDispatch();
+  const saving = useAppSelector((s) => s.admin.saving);
+  return { isPending: saving, mutate: (input, callbacks) => dispatch(updateDocumentStatus(input)).unwrap().then((result) => callbacks?.onSuccess?.(result)).catch((e) => callbacks?.onError?.(e)) };
+}
+
+export function useDeleteDocumentStatus(): Mutation<number> {
+  const dispatch = useAppDispatch();
+  const saving = useAppSelector((s) => s.admin.saving);
+  return { isPending: saving, mutate: (id, callbacks) => dispatch(deleteDocumentStatus(id)).unwrap().then((result) => callbacks?.onSuccess?.(result)).catch((e) => callbacks?.onError?.(e)) };
 }
 
 // ---------- Rủi ro & Cơ hội (CR-RISK-OPPORTUNITY-001) ----------

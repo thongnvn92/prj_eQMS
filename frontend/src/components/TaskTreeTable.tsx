@@ -69,20 +69,22 @@ function ProgressCell({
 
   return (
     <Space size={6} align='center' wrap>
-      <InputNumber
-        size='small'
-        min={0}
-        max={100}
-        value={local}
-        addonAfter='%'
-        style={{ width: 88 }}
-        aria-label={`Tiến độ ${row.code}`}
-        onChange={(v) => {
-          if (typeof v === 'number') setLocal(v);
-        }}
-        onBlur={commit}
-        onPressEnter={(e) => (e.target as HTMLInputElement).blur()}
-      />
+      <Space.Compact>
+        <InputNumber
+          size='small'
+          min={0}
+          max={100}
+          value={local}
+          style={{ width: 68 }}
+          aria-label={`Tiến độ ${row.code}`}
+          onChange={(v) => {
+            if (typeof v === 'number') setLocal(v);
+          }}
+          onBlur={commit}
+          onPressEnter={(e) => (e.target as HTMLInputElement).blur()}
+        />
+        <span style={{ display: 'inline-flex', alignItems: 'center', padding: '0 8px', border: '1px solid #d9d9d9', borderLeft: 0, borderRadius: '0 6px 6px 0', background: '#fafafa' }}>%</span>
+      </Space.Compact>
       <Progress
         percent={local}
         size='small'
@@ -214,7 +216,7 @@ export default function TaskTreeTable({
       width: 140,
       ellipsis: true,
       render: (_, row) =>
-        row.ownerId !== null ? people.find((p) => p.id === row.ownerId)?.fullName ?? '—' : '—',
+        row.ownerName || (row.ownerId !== null ? people.find((p) => p.id === row.ownerId)?.fullName ?? '—' : '—'),
     },
     {
       title: 'Trạng thái',

@@ -20,6 +20,7 @@ class PhaseResource extends JsonResource
             'endDate' => $this->dateStr($this->end_date),
             // CR Master Plan ISO: phase thuộc kế hoạch nào → FE lọc công việc theo kế hoạch.
             'masterPlanId' => $this->master_plan_id,
+            'sortOrder' => (int) $this->sort_order,
         ];
     }
 

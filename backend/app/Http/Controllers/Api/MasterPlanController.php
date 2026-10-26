@@ -9,8 +9,10 @@ use App\Http\Resources\PhaseResource;
 use App\Http\Resources\TaskResource;
 use App\Models\ActivityLog;
 use App\Models\MasterPlan;
+use App\Models\MasterPlanDependency;
 use App\Models\MasterPlanPhase;
 use App\Models\MasterPlanTask;
+use App\Services\MasterPlanService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,6 +20,10 @@ use Illuminate\Support\Facades\DB;
 
 class MasterPlanController extends Controller
 {
+    public function __construct(private MasterPlanService $service)
+    {
+    }
+
     /**
      * GET /master-plan – trả plans[] (nhiều kế hoạch), phases[], tasks[] để khớp contract FE.
      * tasks[] trả PHẲNG (task gốc + sub-task) kèm parentId để FE tự dựng cây (flattenVisibleTree).
@@ -123,6 +129,11 @@ class MasterPlanController extends Controller
     }
 
     /** DELETE /master-plan/plans/{id} – xoá kế hoạch (quyền master_plan.delete). */
+    /**
+     * DELETE /master-plan/plans/{id} – xóa kế hoạch + toàn bộ dữ liệu liên quan:
+     * dependencies → tasks → phases → plan (trong 1 transaction).
+     * documents.related_task_id / actions.related_task_id FK nullOnDelete nên an toàn.
+     */
     public function destroyPlan(int $id): JsonResponse
     {
         $actor = Auth::guard('sanctum')->user();
@@ -135,16 +146,38 @@ class MasterPlanController extends Controller
             return $this->error('Không tìm thấy kế hoạch.', 404);
         }
 
-        $plan->delete();
+        $phaseIds = MasterPlanPhase::where('master_plan_id', $plan->id)->pluck('id');
+        $taskIds = MasterPlanTask::whereIn('phase_id', $phaseIds)->pluck('id');
+
+        DB::transaction(function () use ($plan, $phaseIds, $taskIds) {
+            // Dependencies trỏ tới task của kế hoạch (kèm bản ghi theo master_plan_id).
+            MasterPlanDependency::where('master_plan_id', $plan->id)
+                ->orWhereIn('predecessor_task_id', $taskIds)
+                ->orWhereIn('successor_task_id', $taskIds)
+                ->delete();
+            // Sub-task tham chiếu tới task gốc (self-FK dependency_id) → null trước khi xóa.
+            MasterPlanTask::whereIn('id', $taskIds)->update(['dependency_id' => null]);
+            MasterPlanTask::whereIn('id', $taskIds)->delete();
+            MasterPlanPhase::whereIn('id', $phaseIds)->delete();
+            $plan->delete();
+        });
 
         ActivityLog::create([
             'user_id' => $actor->id,
             'action' => 'delete',
             'entity' => 'master_plan',
             'entity_id' => $id,
+            'properties' => json_encode([
+                'code' => $plan->code,
+                'phases' => count($phaseIds),
+                'tasks' => count($taskIds),
+            ]),
         ]);
 
-        return response()->json(['status' => 'ok']);
+        return response()->json([
+            'status' => 'ok',
+            'deleted' => ['phases' => count($phaseIds), 'tasks' => count($taskIds)],
+        ]);
     }
 
     /** POST /master-plan/tasks – tạo công việc hoặc sub-task (quyền master_plan.create). */
@@ -161,8 +194,10 @@ class MasterPlanController extends Controller
             'code' => ['required', 'string', 'max:30'],
             'name' => ['required', 'string', 'max:250'],
             'ownerId' => ['nullable', 'integer', 'exists:users,id'],
+            'ownerName' => ['nullable', 'string', 'max:250'],
             'departmentId' => ['nullable', 'integer', 'exists:departments,id'],
             'priority' => ['sometimes', 'in:critical,high,medium,low'],
+            'status' => ['sometimes', 'in:not_started,in_progress,blocked,delayed,completed,cancelled'],
             'startDate' => ['required', 'date'],
             'dueDate' => ['required', 'date'],
             'note' => ['nullable', 'string'],
@@ -174,6 +209,7 @@ class MasterPlanController extends Controller
 
         $maxSort = (int) MasterPlanTask::where('parent_id', $data['parentId'] ?? null)->max('sort_order');
 
+        // Mặc định công việc mới = not_started (Chưa thực hiện); cho phép chọn trạng thái khác trên form.
         $task = MasterPlanTask::create([
             'phase_id' => $data['phaseId'],
             'parent_id' => $data['parentId'] ?? null,
@@ -181,9 +217,10 @@ class MasterPlanController extends Controller
             'code' => $data['code'],
             'name' => $data['name'],
             'owner_id' => $data['ownerId'] ?? null,
+            'owner_name' => $data['ownerName'] ?? null,
             'department_id' => $data['departmentId'] ?? null,
             'priority' => $data['priority'] ?? 'medium',
-            'status' => 'not_started',
+            'status' => $data['status'] ?? 'not_started',
             'progress' => 0,
             'start_date' => $data['startDate'],
             'due_date' => $data['dueDate'],
@@ -347,6 +384,7 @@ class MasterPlanController extends Controller
             'code' => $code,
             'name' => $name,
             'owner_id' => $ownerId === null || $ownerId === '' ? null : (int) $ownerId,
+            'owner_name' => $row['ownerName'] ?? null,
             'department_id' => $departmentId === null || $departmentId === '' ? null : (int) $departmentId,
             'priority' => $priority,
             'status' => 'not_started',
@@ -374,7 +412,8 @@ class MasterPlanController extends Controller
             'priority' => ['sometimes', 'in:critical,high,medium,low'],
             'status' => ['sometimes', 'string', 'in:not_started,in_progress,blocked,delayed,completed,cancelled'],
             'progress' => ['sometimes', 'integer', 'min:0', 'max:100'],
-            'ownerId' => ['sometimes', 'integer', 'exists:users,id'],
+            'ownerId' => ['sometimes', 'nullable', 'integer', 'exists:users,id'],
+            'ownerName' => ['sometimes', 'nullable', 'string', 'max:250'],
             'departmentId' => ['sometimes', 'integer', 'exists:departments,id'],
             'startDate' => ['sometimes', 'date'],
             'dueDate' => ['sometimes', 'date'],
@@ -385,12 +424,15 @@ class MasterPlanController extends Controller
         if (array_key_exists('ownerId', $data) && ! $this->can($actor, 'master_plan.assign')) {
             return $this->error('Bạn không có quyền giao việc.', 403);
         }
+        if (array_key_exists('ownerName', $data) && ! $this->can($actor, 'master_plan.assign')) {
+            return $this->error('Bạn không có quyền giao việc.', 403);
+        }
 
         $oldStatus = $task->status;
         $map = [
             'code' => 'code', 'name' => 'name', 'phaseId' => 'phase_id',
             'priority' => 'priority', 'status' => 'status', 'progress' => 'progress',
-            'ownerId' => 'owner_id', 'departmentId' => 'department_id',
+            'ownerId' => 'owner_id', 'ownerName' => 'owner_name', 'departmentId' => 'department_id',
             'startDate' => 'start_date', 'dueDate' => 'due_date',
             'note' => 'note', 'result' => 'result',
         ];
@@ -399,9 +441,17 @@ class MasterPlanController extends Controller
                 $task->{$col} = $data[$in];
             }
         }
-        if ($task->status === 'completed') {
+        $task->progress = max(0, min(100, (int) $task->progress));
+        // Chọn "Hoàn thành" trên form ⇒ progress 100; các trạng thái còn lại suy ra
+        // từ tiến độ + deadline (blocked/cancelled giữ nguyên) – xem MasterPlanService.
+        if (($data['status'] ?? null) === 'completed') {
             $task->progress = 100;
         }
+        $task->status = $this->service->normalizeTaskStatus(
+            $data['status'] ?? $oldStatus,
+            (int) $task->progress,
+            $task->due_date?->format('Y-m-d'),
+        );
         $task->save();
 
         if ($oldStatus !== $task->status) {
@@ -422,7 +472,8 @@ class MasterPlanController extends Controller
      * PATCH /master-plan/tasks/{id}/progress – CR Master Plan ISO.
      * Người phụ trách task (owner) được cập nhật tiến độ công việc CỦA MÌNH;
      * người có quyền master_plan.update được cập nhật cho bất kỳ task nào.
-     * Giữ nguyên business rule hiện có: completed ⇒ progress = 100.
+     * Trạng thái tự suy ra theo tiến độ (0 → not_started, 1..99 → in_progress,
+     * 100 → completed, quá deadline → delayed; blocked/cancelled giữ nguyên).
      */
     public function updateTaskProgress(Request $request, int $id): JsonResponse
     {
@@ -441,20 +492,35 @@ class MasterPlanController extends Controller
             'progress' => ['required', 'integer', 'min:0', 'max:100'],
         ]);
 
+        $oldStatus = $task->status;
         $task->progress = (int) $data['progress'];
-        if ($task->status === 'completed') {
-            $task->progress = 100;
-        }
+        // Suy ra trạng thái từ tiến độ + deadline (quy tắc: 0 → Chưa thực hiện,
+        // 1..99 → Đang thực hiện, 100 → Hoàn thành, quá hạn → Trễ hạn).
+        $task->status = $this->service->normalizeTaskStatus(
+            $task->status,
+            $task->progress,
+            $task->due_date?->format('Y-m-d'),
+        );
         $task->save();
 
-        // Audit trail (không ghi status_change – đúng NFR-02: progress-only không đổi status).
+        // Audit trail (kèm status_change khi trạng thái suy ra thay đổi).
         ActivityLog::create([
             'user_id' => $actor->id,
             'action' => 'update',
             'entity' => LogEntity::MasterPlanTask->value,
             'entity_id' => $task->id,
-            'properties' => json_encode(['progress' => $task->progress]),
+            'properties' => json_encode(['progress' => $task->progress, 'status' => $task->status]),
         ]);
+        if ($oldStatus !== $task->status) {
+            ActivityLog::create([
+                'user_id' => $actor->id,
+                'action' => 'status_change',
+                'entity' => LogEntity::MasterPlanTask->value,
+                'entity_id' => $task->id,
+                'old_status' => $oldStatus,
+                'new_status' => $task->status,
+            ]);
+        }
 
         return response()->json(new TaskResource($task->fresh()));
     }

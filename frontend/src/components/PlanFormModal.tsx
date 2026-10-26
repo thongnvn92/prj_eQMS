@@ -1,5 +1,4 @@
 // Form tạo/Sửa Master Plan (kế hoạch tổng thể).
-import { useEffect } from 'react';
 import { Form, Input, Space, Typography, Modal } from 'antd';
 import type { FormInstance } from 'antd';
 import type { PlanFormValues } from '../store/slices/ganttGeometry';
@@ -16,14 +15,6 @@ export interface PlanFormModalProps {
 export default function PlanFormModal({ open, title, plan, onCancel, onOk }: PlanFormModalProps) {
   const [form] = Form.useForm<PlanFormValues>();
 
-  useEffect(() => {
-    if (!open) return;
-    form.resetFields();
-    if (plan) {
-      form.setFieldsValue({ code: plan.code, name: plan.name, cycleLabel: plan.cycleLabel, startDate: plan.startDate, endDate: plan.endDate, description: plan.description });
-    }
-  }, [open, plan, form]);
-
   return (
     <Modal
       open={open}
@@ -32,7 +23,21 @@ export default function PlanFormModal({ open, title, plan, onCancel, onOk }: Pla
       onOk={() => form.validateFields().then(onOk).catch(() => undefined)}
       okText="Lưu"
       cancelText="Hủy"
-      destroyOnClose
+      destroyOnHidden
+      afterOpenChange={(isOpen) => {
+        if (!isOpen) return;
+        form.resetFields();
+        if (plan) {
+          form.setFieldsValue({
+            code: plan.code,
+            name: plan.name,
+            cycleLabel: plan.cycleLabel,
+            startDate: plan.startDate,
+            endDate: plan.endDate,
+            description: plan.description,
+          });
+        }
+      }}
     >
       <Form form={form} layout="vertical">
         <Form.Item name="code" label="Mã kế hoạch" rules={[{ required: true, message: 'Bắt buộc' }]}>

@@ -15,12 +15,12 @@ export const DEMO_ACCOUNTS = [
 ];
 
 const departments: Department[] = [
-  { id: 1, code: 'BM01', name: 'Ban Giám đốc' },
-  { id: 2, code: 'BM02', name: 'Ban ISO' },
-  { id: 3, code: 'BM03', name: 'Phòng Hành chính – Nhân sự' },
-  { id: 4, code: 'BM04', name: 'Phòng Kinh doanh' },
-  { id: 5, code: 'BM05', name: 'Phòng Kỹ thuật – Đảm bảo chất lượng' },
-  { id: 6, code: 'BM06', name: 'Phòng Sản xuất' },
+  { id: 1, code: 'BM01', name: 'Ban Giám đốc', description: 'Ban lãnh đạo tổng ca, có thẩm quyền cao nhất.' },
+  { id: 2, code: 'BM02', name: 'Ban ISO', description: 'Ban Tiêu chuẩn ISO 9001:2015 quản lý hệ thống chất lượng.' },
+  { id: 3, code: 'BM03', name: 'Phòng Hành chính – Nhân sự', description: 'Hoàn thành hành chính nội bộ và công tác nhân sự.' },
+  { id: 4, code: 'BM04', name: 'Phòng Kinh doanh', description: 'Quản lý sales, chăm sóc khách hàng và thu nhập.' },
+  { id: 5, code: 'BM05', name: 'Phòng Kỹ thuật – Đảm bảo chất lượng', description: 'Chủ trì xây dựng, rà soát và cải tiến hệ thống ISO.' },
+  { id: 6, code: 'BM06', name: 'Phòng Sản xuất', description: 'Thực hiện sản xuất và áp dụng các quy trình công đoạn.' },
 ];
 
 const users: User[] = [
@@ -296,6 +296,7 @@ export function seedRoles(): RoleItem[] {
     id: i + 1,
     code,
     name: ROLE_NAMES[code],
+    description: ROLE_NAMES[code],
     permissions: [...ROLE_PERMISSIONS[code]],
   }));
 }
@@ -303,6 +304,7 @@ export function seedRoles(): RoleItem[] {
 export function seed(): MockDb {
   return {
     departments: departments.map((d) => ({ ...d })),
+    documentsStatuses: [],
     users: users.map((u) => ({ ...u, roleCodes: [...u.roleCodes] })),
     roles: seedRoles(),
     phases: phases.map((p) => ({ ...p })),

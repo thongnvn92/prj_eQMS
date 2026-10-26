@@ -35,7 +35,7 @@ export default function ReorderTaskModal({ open, orderIds, onCancel, onOk }: Reo
       onOk={() => onOk(ids)}
       okText="Lưu thứ tự"
       cancelText="Hủy"
-      destroyOnClose
+      destroyOnHidden
     >
       <List
         dataSource={ids}

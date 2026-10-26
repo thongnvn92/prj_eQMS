@@ -52,7 +52,7 @@ class DocumentVersionTest extends TestCase
             // auto_version=true (mac dinh) → V1.0 → V2.0.
             $response->assertJsonPath('currentVersion', 'V2.0');
             $response->assertJsonPath('status', 'draft');
-            $response->assertJsonPath('workflowStep', 1);
+            $response->assertJsonPath('workflowStep', 2);
 
             $doc = Document::find(8);
             $this->assertSame('V2.0', $doc->current_version);

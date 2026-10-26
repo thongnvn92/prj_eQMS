@@ -24,6 +24,7 @@ class TaskResource extends JsonResource
             'parentId' => $this->parent_id,
             'sortOrder' => (int) $this->sort_order,
             'ownerId' => $this->owner_id,
+            'ownerName' => $this->owner_name,
             'departmentId' => $this->department_id,
             'priority' => $this->priority,
             'status' => $this->status,

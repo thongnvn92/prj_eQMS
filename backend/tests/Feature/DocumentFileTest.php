@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -126,6 +127,41 @@ class DocumentFileTest extends TestCase
             $dl = $this->withHeaders($headers)->get('/api/documents/files/'.$fileId.'/download');
             $dl->assertOk();
             $this->assertStringContainsString('inline', $dl->headers->get('Content-Disposition'));
+        });
+    }
+
+    public function test_document_view_user_can_download_a_file_uploaded_by_another_member(): void
+    {
+        $this->tx(function () {
+            $memberHeaders = $this->authAs('deputy', 'Deputy123!');
+            $upload = $this->withHeaders($memberHeaders)->post('/api/documents/2/files', [
+                'files' => [UploadedFile::fake()->createWithContent('shared.pdf', 'approved content')],
+            ]);
+            $upload->assertCreated();
+            $fileId = $upload->json('0.id');
+
+            $readerHeaders = $this->authAs('user', 'User123!');
+            $download = $this->withHeaders($readerHeaders)
+                ->get('/api/documents/files/'.$fileId.'/download');
+
+            $download->assertOk();
+            $this->assertSame('approved content', $download->streamedContent());
+        });
+    }
+
+    public function test_download_requires_authentication(): void
+    {
+        $this->get('/api/documents/files/1/download')->assertUnauthorized();
+    }
+
+    public function test_document_files_require_document_view_permission(): void
+    {
+        $this->tx(function () {
+            User::where('username', 'user')->firstOrFail()->roles()->detach();
+            $headers = $this->authAs('user', 'User123!');
+
+            $this->withHeaders($headers)->getJson('/api/documents/2/files')->assertForbidden();
+            $this->withHeaders($headers)->get('/api/documents/files/1/download')->assertForbidden();
         });
     }
 

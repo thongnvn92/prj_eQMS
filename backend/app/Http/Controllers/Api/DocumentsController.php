@@ -62,7 +62,8 @@ class DocumentsController extends Controller
 
     /**
      * POST /documents/{id}/transition?action=..&comment=..
-     * Workflow tài liệu: draft→reviewing→approval_pending→approved→published (kèm reject).
+     * Workflow tài liệu: planned → draft → review_pending → reviewing → approval_pending
+     * → approved → published (kèm reject từ reviewing/approval_pending về draft).
      * Trả DocumentResource (camelCase).
      */
     public function transition(Request $request, int $id): JsonResponse
@@ -78,7 +79,7 @@ class DocumentsController extends Controller
         }
 
         $data = $request->validate([
-            'action' => ['required', 'string', 'in:submit,review,approve,reject,publish'],
+            'action' => ['required', 'string', 'in:start_draft,submit,start_review,review,approve,reject,publish'],
             'comment' => ['nullable', 'string'],
         ]);
         $action = $data['action'];
@@ -86,7 +87,9 @@ class DocumentsController extends Controller
 
         // Quyền theo TỪNG transition.
         $permMap = [
+            'start_draft' => 'document.submit',
             'submit' => 'document.submit',
+            'start_review' => 'document.review',
             'review' => 'document.review',
             'approve' => 'document.approve',
             'reject' => 'document.approve',
@@ -99,7 +102,9 @@ class DocumentsController extends Controller
 
         // State machine.
         $transitions = [
-            'draft' => ['submit' => 'reviewing'],
+            'planned' => ['start_draft' => 'draft'],
+            'draft' => ['submit' => 'review_pending'],
+            'review_pending' => ['start_review' => 'reviewing'],
             'reviewing' => ['review' => 'approval_pending', 'reject' => 'draft'],
             'approval_pending' => ['approve' => 'approved', 'reject' => 'draft'],
             'approved' => ['publish' => 'published'],
@@ -114,6 +119,7 @@ class DocumentsController extends Controller
         $oldStatus = $doc->status;
         $doc->status = $transitions[$doc->status][$action];
         $doc->status_updated_at = now();
+        $doc->workflow_step = $this->workflowStep((string) $doc->status);
 
         // Ban hành lần đầu: V0.x -> V1.0.
         if ($action === 'publish') {
@@ -163,9 +169,10 @@ class DocumentsController extends Controller
     }
 
     /**
-     * POST /documents – tạo tài liệu mới (draft).
+     * POST /documents – tạo tài liệu mới (planned – Chưa dự thảo / dự kiến).
      * Quyền: document.create (Ban ISO: leader/deputy/member/coordinator + document_owner + super_admin).
-     * Tạo Document (status=draft, workflow_step=1) + DocumentVersion V0.1 đầu tiên + activity log.
+     * Tạo Document (status=planned, workflow_step=1) + DocumentVersion V0.1 đầu tiên + activity log.
+     * Từ planned, người phụ trách dùng transition start_draft để bắt đầu soạn thảo (draft).
      */
     public function store(Request $request): JsonResponse
     {
@@ -180,6 +187,7 @@ class DocumentsController extends Controller
             'docType' => ['required', 'string', 'in:policy,manual,regulation,procedure,work_instruction,form,record,standard'],
             'departmentId' => ['nullable', 'integer', 'exists:departments,id'],
             'ownerId' => ['nullable', 'integer', 'exists:users,id'],
+            'ownerName' => ['nullable', 'string', 'max:250'],
             'relatedTaskId' => ['nullable', 'integer', 'exists:master_plan_tasks,id'],
             'description' => ['nullable', 'string'],
             'changeSummary' => ['nullable', 'string'],
@@ -192,8 +200,9 @@ class DocumentsController extends Controller
             'doc_type' => $data['docType'],
             'department_id' => $data['departmentId'] ?? $user->department_id,
             'owner_id' => $data['ownerId'] ?? $user->id,
+            'owner_name' => $data['ownerName'] ?? null,
             'current_version' => 'V0.1',
-            'status' => 'draft',
+            'status' => 'planned',
             'workflow_step' => 1,
             'auto_version' => $data['autoVersion'] ?? true,
             'related_task_id' => $data['relatedTaskId'] ?? null,
@@ -213,7 +222,7 @@ class DocumentsController extends Controller
             'entity' => LogEntity::Document->value,
             'entity_id' => $doc->id,
             'old_status' => null,
-            'new_status' => 'draft',
+            'new_status' => 'planned',
         ]);
 
         return response()->json(new DocumentResource($doc->fresh(['versions', 'approvals', 'files.file'])), 201);
@@ -349,7 +358,7 @@ class DocumentsController extends Controller
             'department_id' => $departmentId === null || $departmentId === '' ? null : (int) $departmentId,
             'owner_id' => $ownerId === null || $ownerId === '' ? $userId : (int) $ownerId,
             'current_version' => 'V0.1',
-            'status' => 'draft',
+            'status' => 'planned',
             'workflow_step' => 1,
             'auto_version' => true,
             'related_task_id' => null,
@@ -358,8 +367,8 @@ class DocumentsController extends Controller
     }
 
     /**
-     * PATCH /documents/{id} – sửa metadata tài liệu đang ở draft.
-     * Quyền: document.update. Chỉ sửa khi status=draft (không overwrite version đã ban hành);
+     * PATCH /documents/{id} – sửa metadata tài liệu đang ở planned/draft.
+     * Quyền: document.update. Chỉ sửa khi status=planned hoặc draft (không overwrite version đã ban hành);
      * đổi nội dung version hiện hành → tạo version nháp mới (V0.x+1) thay vì sửa trực tiếp.
      */
     public function update(Request $request, int $id): JsonResponse
@@ -373,8 +382,8 @@ class DocumentsController extends Controller
         if (! $doc) {
             return $this->error('Không tìm thấy tài liệu.', 404);
         }
-        if ($doc->status !== 'draft') {
-            return $this->error('Chỉ được sửa tài liệu ở trạng thái dự thảo (draft).', 409);
+        if (! in_array($doc->status, ['planned', 'draft'], true)) {
+            return $this->error('Chỉ được sửa tài liệu ở trạng thái chưa dự thảo (planned) hoặc dự thảo (draft).', 409);
         }
 
         $data = $request->validate([
@@ -383,6 +392,7 @@ class DocumentsController extends Controller
             'docType' => ['sometimes', 'string', 'in:policy,manual,regulation,procedure,work_instruction,form,record,standard'],
             'departmentId' => ['nullable', 'integer', 'exists:departments,id'],
             'ownerId' => ['nullable', 'integer', 'exists:users,id'],
+            'ownerName' => ['nullable', 'string', 'max:250'],
             'relatedTaskId' => ['nullable', 'integer', 'exists:master_plan_tasks,id'],
             'description' => ['nullable', 'string'],
             'changeSummary' => ['nullable', 'string'],
@@ -392,7 +402,7 @@ class DocumentsController extends Controller
 
         $map = [
             'code' => 'code', 'name' => 'name', 'docType' => 'doc_type',
-            'departmentId' => 'department_id', 'ownerId' => 'owner_id',
+            'departmentId' => 'department_id', 'ownerId' => 'owner_id', 'ownerName' => 'owner_name',
             'relatedTaskId' => 'related_task_id', 'description' => 'description',
             'autoVersion' => 'auto_version',
         ];
@@ -400,6 +410,9 @@ class DocumentsController extends Controller
             if (array_key_exists($in, $data)) {
                 $doc->{$col} = $data[$in];
             }
+        }
+        if (array_key_exists('ownerName', $data) && ! array_key_exists('ownerId', $data)) {
+            $doc->owner_id = null;
         }
         $doc->save();
 
@@ -442,8 +455,8 @@ class DocumentsController extends Controller
             'action' => 'update',
             'entity' => LogEntity::Document->value,
             'entity_id' => $doc->id,
-            'old_status' => 'draft',
-            'new_status' => 'draft',
+            'old_status' => $doc->status,
+            'new_status' => $doc->status,
         ]);
 
         return response()->json(new DocumentResource($doc->fresh(['versions', 'approvals', 'files.file'])));
@@ -617,7 +630,7 @@ class DocumentsController extends Controller
         $doc->update([
             'current_version' => $newVersion,
             'status' => 'draft',
-            'workflow_step' => 1,
+            'workflow_step' => $this->workflowStep('draft'),
             'status_updated_at' => now(),
         ]);
 
@@ -693,6 +706,21 @@ class DocumentsController extends Controller
         ]);
 
         return response()->json(['status' => 'ok']);
+    }
+
+    /** Số bước workflow theo trạng thái (pipeline: planned=1 ... published=7). */
+    private function workflowStep(string $status): int
+    {
+        return match ($status) {
+            'planned' => 1,
+            'draft' => 2,
+            'review_pending' => 3,
+            'reviewing' => 4,
+            'approval_pending' => 5,
+            'approved' => 6,
+            'published' => 7,
+            default => 1,
+        };
     }
 
     /** Tăng bậc lớn: V1.0 -> V2.0 ; V2.3 -> V3.0 (lấy số nguyên đầu +1). */

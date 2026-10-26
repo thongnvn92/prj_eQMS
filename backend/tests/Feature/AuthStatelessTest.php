@@ -115,6 +115,22 @@ class AuthStatelessTest extends TestCase
         $response->assertJsonValidationErrors(['password']);
     }
 
+    public function test_login_requires_username(): void
+    {
+        $response = $this->postJson('/api/login', ['password' => 'Leader123!']);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['username']);
+    }
+
+    public function test_login_empty_body_requires_both_credentials(): void
+    {
+        $response = $this->postJson('/api/login', []);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['username', 'password']);
+    }
+
     public function test_me_with_valid_token_returns_session_user_directly(): void
     {
         [, $data] = $this->login('leader', 'Leader123!');
