@@ -2,8 +2,15 @@
 // của từng Master Plan. Nguồn dữ liệu duy nhất: flattenVisibleTree → expandVisibleRows.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAppDispatch } from '../store/hooks';
-import { Button, Card, Select, Space, Typography, message } from 'antd';
-import { EditOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Button, Card, Modal, Popover, Radio, Select, Space, Typography, message } from 'antd';
+import {
+  BarChartOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  FilterOutlined,
+  GroupOutlined,
+  PlusOutlined,
+} from '@ant-design/icons';
 import { useAuth } from '../auth/AuthContext';
 import { useLookups, useMasterPlan } from '../hooks/queries';
 import {
@@ -16,12 +23,30 @@ import {
 import TaskTreeTable from './TaskTreeTable';
 import TaskFormModal from './TaskFormModal';
 import PlanFormModal from './PlanFormModal';
-import type { MasterPlan, Task } from '../mock/types';
+import TaskStatusLegend from './TaskStatusLegend';
+import GanttPage from '../pages/GanttPage';
+import { isTaskOverdue, TASK_STATUS } from './widgets';
+import type { MasterPlan, Task, TaskStatus } from '../mock/types';
 import type { PlanFormValues, TaskFormValues } from '../store/slices/ganttGeometry';
 import type { VisibleRow } from '../store/slices/flattenTree';
 
 const EXPANDED_KEY = 'eqms.mp.expanded';
 const PLAN_KEY = 'eqms.mp.plan';
+
+type GroupBy = 'phase' | 'owner' | 'status';
+
+interface MasterPlanFilters {
+  ownerKey?: string;
+  status?: TaskStatus | 'overdue';
+  phaseId?: number;
+}
+
+interface TaskGroup {
+  key: string;
+  title: string;
+  tasks: Task[];
+  totalCount: number;
+}
 
 function loadObject<T>(key: string, fallback: T): T {
   try {
@@ -75,24 +100,98 @@ export default function MasterPlanWorkspace() {
     [allTasks, allPhases, effectivePlanId],
   );
 
-  // ---- Cây phân cấp: allRows = toàn bộ, visibleRows = đã áp thu gọn/mở rộng ----
   const [expandedIds, setExpandedIds] = useState<number[]>(() => loadObject<number[]>(EXPANDED_KEY, []));
   useEffect(() => {
     saveObject(EXPANDED_KEY, expandedIds);
   }, [expandedIds]);
 
-  // ---- Nhóm công việc theo giai đoạn (mỗi nhóm là một bảng cây riêng) ----
-  const groupedByPhase = useMemo(() => {
-    return phases.map((ph) => {
-      const phaseTasks = tasks.filter((t) => t.phaseId === ph.id);
-      const phaseRows = flattenVisibleTree(phaseTasks, expandedIds, {});
-      const phaseVisible = expandVisibleRows(phaseRows, expandedIds);
-      const phaseExpandable = new Set(phaseRows.filter((r) => r.childrenIds.length > 0).map((r) => r.id));
-      return { phase: ph, rows: phaseVisible, expandableIds: phaseExpandable };
+  const [filters, setFilters] = useState<MasterPlanFilters>({});
+  const [groupBy, setGroupBy] = useState<GroupBy>('phase');
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [groupOpen, setGroupOpen] = useState(false);
+  const [ganttOpen, setGanttOpen] = useState(false);
+
+  const ownerOptions = useMemo(() => {
+    const owners = new Map<string, string>();
+    tasks.forEach((task) => {
+      const key = task.ownerId != null
+        ? `id:${task.ownerId}`
+        : task.ownerName?.trim()
+          ? `name:${task.ownerName.trim().toLocaleLowerCase()}`
+          : 'unassigned';
+      const label = task.ownerName
+        || people.find((person) => person.id === task.ownerId)?.fullName
+        || 'Chưa phân công';
+      if (!owners.has(key)) owners.set(key, label);
     });
-  }, [phases, tasks, expandedIds]);
+    return [...owners].map(([value, label]) => ({ value, label }));
+  }, [tasks, people]);
+
+  const filteredTasks = useMemo(() => tasks.filter((task) => {
+    const ownerKey = task.ownerId != null
+      ? `id:${task.ownerId}`
+      : task.ownerName?.trim()
+        ? `name:${task.ownerName.trim().toLocaleLowerCase()}`
+        : 'unassigned';
+    return (!filters.ownerKey || ownerKey === filters.ownerKey)
+      && (!filters.status || (filters.status === 'overdue'
+        ? isTaskOverdue(task)
+        : task.status === filters.status))
+      && (filters.phaseId == null || task.phaseId === filters.phaseId);
+  }), [tasks, filters]);
+
+  const taskGroups = useMemo<TaskGroup[]>(() => {
+    if (groupBy === 'phase') {
+      return phases.map((phase) => ({
+        key: `phase:${phase.id}`,
+        title: `${phase.code} · ${phase.name}`,
+        tasks: filteredTasks.filter((task) => task.phaseId === phase.id),
+        totalCount: tasks.filter((task) => task.phaseId === phase.id).length,
+      }));
+    }
+
+    if (groupBy === 'status') {
+      return Object.entries(TASK_STATUS).map(([status, meta]) => ({
+        key: `status:${status}`,
+        title: meta.label,
+        tasks: filteredTasks.filter((task) => task.status === status),
+        totalCount: tasks.filter((task) => task.status === status).length,
+      }));
+    }
+
+    return ownerOptions.map(({ value, label }) => ({
+      key: `owner:${value}`,
+      title: label,
+      tasks: filteredTasks.filter((task) => {
+        const ownerKey = task.ownerId != null
+          ? `id:${task.ownerId}`
+          : task.ownerName?.trim()
+            ? `name:${task.ownerName.trim().toLocaleLowerCase()}`
+            : 'unassigned';
+        return ownerKey === value;
+      }),
+      totalCount: tasks.filter((task) => {
+        const ownerKey = task.ownerId != null
+          ? `id:${task.ownerId}`
+          : task.ownerName?.trim()
+            ? `name:${task.ownerName.trim().toLocaleLowerCase()}`
+            : 'unassigned';
+        return ownerKey === value;
+      }).length,
+    }));
+  }, [groupBy, phases, tasks, filteredTasks, ownerOptions]);
+
+  const groupedRows = useMemo(() => taskGroups.map((group) => {
+    const rows = flattenVisibleTree(group.tasks, expandedIds, {});
+    return {
+      ...group,
+      rows: expandVisibleRows(rows, expandedIds),
+      expandableIds: new Set(rows.filter((row) => row.childrenIds.length > 0).map((row) => row.id)),
+    };
+  }), [taskGroups, expandedIds]);
+
+  // ---- Cây phân cấp: allRows = toàn bộ, visibleRows = đã áp thu gọn/mở rộng ----
   const allRows = useMemo(() => flattenVisibleTree(tasks, expandedIds, {}), [tasks, expandedIds]);
-  const visibleRows = useMemo(() => expandVisibleRows(allRows, expandedIds), [allRows, expandedIds]);
   const expandableIds = useMemo(
     () => new Set(allRows.filter((r) => r.childrenIds.length > 0).map((r) => r.id)),
     [allRows],
@@ -264,7 +363,7 @@ export default function MasterPlanWorkspace() {
       </div>
 
       <Card size='small' className='eqms-masterplan-toolbar'>
-        <div className='eqms-mp-toolbar-row'>
+        <div className='eqms-mp-toolbar-row' style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
           <Space wrap>
             <Typography.Text strong>Master Plan:</Typography.Text>
             <Select
@@ -291,21 +390,127 @@ export default function MasterPlanWorkspace() {
               </Button>
             )}
           </Space>
+          <Typography.Text type='secondary' style={{ marginLeft: 'auto', whiteSpace: 'nowrap', alignSelf: 'center' }}>
+            Tổng công việc: {tasks.length}
+          </Typography.Text>
         </div>
-        <div className='eqms-mp-toolbar-row eqms-mp-toolbar-actions'>
-          {/* Mở rộng/Thu gọn tất cả nay là nút icon (+) / (−) ở header cột "Công việc". */}
-          {can('master_plan.create') && (
-            <Button type='primary' icon={<PlusOutlined />} onClick={openCreate}>
-              Thêm công việc
-            </Button>
-          )}
+        <div className='eqms-mp-toolbar-row' style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: 16 }}>
+          <div>
+            {can('master_plan.create') && (
+              <Button type='primary' icon={<PlusOutlined />} onClick={openCreate}>
+                Thêm công việc
+              </Button>
+            )}
+            <div style={{ marginTop: 8 }}>
+              <TaskStatusLegend />
+            </div>
+          </div>
+          <Space align='start'>
+            <Popover
+              title='Lọc công việc'
+              trigger='click'
+              open={filterOpen}
+              onOpenChange={setFilterOpen}
+              content={
+                <Space direction='vertical' style={{ width: 260 }}>
+                  <Select
+                    allowClear
+                    aria-label='Lọc theo phụ trách'
+                    placeholder='Phụ trách'
+                    value={filters.ownerKey}
+                    options={ownerOptions}
+                    onChange={(ownerKey) => setFilters((current) => ({ ...current, ownerKey }))}
+                    style={{ width: '100%' }}
+                  />
+                  <Select
+                    allowClear
+                    aria-label='Lọc theo trạng thái'
+                    placeholder='Trạng thái'
+                    value={filters.status}
+                    options={[
+                      ...Object.entries(TASK_STATUS).map(([value, meta]) => ({ value, label: meta.label })),
+                      { value: 'overdue', label: 'Quá hạn' },
+                    ]}
+                    onChange={(status) => setFilters((current) => ({
+                      ...current,
+                      status: status as TaskStatus | 'overdue' | undefined,
+                    }))}
+                    style={{ width: '100%' }}
+                  />
+                  <Select
+                    allowClear
+                    aria-label='Lọc theo nhóm công việc'
+                    placeholder='Nhóm công việc'
+                    value={filters.phaseId}
+                    options={phases.map((phase) => ({ value: phase.id, label: `${phase.code} · ${phase.name}` }))}
+                    onChange={(phaseId) => setFilters((current) => ({ ...current, phaseId }))}
+                    style={{ width: '100%' }}
+                  />
+                  <Button onClick={() => setFilters({})}>Xóa bộ lọc</Button>
+                </Space>
+              }
+            >
+              <Button
+                aria-label='Lọc công việc'
+                title='Lọc công việc'
+                type={Object.values(filters).some(Boolean) ? 'primary' : 'default'}
+                icon={<FilterOutlined />}
+              />
+            </Popover>
+            <Popover
+              title='Nhóm công việc theo'
+              trigger='click'
+              open={groupOpen}
+              onOpenChange={setGroupOpen}
+              content={
+                <Radio.Group
+                  value={groupBy}
+                  onChange={(event) => {
+                    setGroupBy(event.target.value as GroupBy);
+                    setGroupOpen(false);
+                  }}
+                >
+                  <Space direction='vertical'>
+                    <Radio value='phase'>Nhóm công việc</Radio>
+                    <Radio value='owner'>Phụ trách</Radio>
+                    <Radio value='status'>Trạng thái</Radio>
+                  </Space>
+                </Radio.Group>
+              }
+            >
+              <Button
+                aria-label='Nhóm công việc'
+                title='Nhóm công việc'
+                type={groupBy !== 'phase' ? 'primary' : 'default'}
+                icon={<GroupOutlined />}
+              />
+            </Popover>
+            <Button
+              aria-label='Mở Gantt Chart'
+              title='Gantt Chart'
+              icon={<BarChartOutlined />}
+              onClick={() => setGanttOpen(true)}
+            />
+          </Space>
         </div>
       </Card>
 
-      {groupedByPhase
-        .filter((g) => g.rows.length > 0)
+      {groupedRows
+        .filter((group) => group.tasks.length > 0)
         .map((g) => (
-          <Card key={g.phase.id} size='small' title={`${g.phase.code} · ${g.phase.name}`} style={{ marginBottom: 12 }}>
+          <Card
+            key={g.key}
+            size='small'
+            title={
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                <span>{g.title}</span>
+                <Typography.Text type='secondary' style={{ whiteSpace: 'nowrap' }}>
+                  {g.tasks.length} / {g.totalCount}
+                </Typography.Text>
+              </div>
+            }
+            style={{ marginBottom: 12 }}
+          >
             <TaskTreeTable
               rows={g.rows}
               expandableIds={g.expandableIds}
@@ -328,6 +533,18 @@ export default function MasterPlanWorkspace() {
             />
           </Card>
         ))}
+
+      <Modal
+        title='Gantt Chart – Tiến độ Master Plan'
+        open={ganttOpen}
+        onCancel={() => setGanttOpen(false)}
+        footer={null}
+        width='95vw'
+        centered
+        styles={{ body: { maxHeight: 'calc(100vh - 120px)', overflowY: 'auto' } }}
+      >
+        <GanttPage embedded initialPlanId={effectivePlanId} />
+      </Modal>
 
       <TaskFormModal
         open={showTaskForm}

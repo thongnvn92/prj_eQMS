@@ -77,6 +77,46 @@ describe('api.me', () => {
   });
 });
 
+describe('api.aiAnalyses', () => {
+  it('loads the current user AI analysis history', async () => {
+    const records = [{
+      id: 3,
+      mode: 'executive',
+      provider: 'gemini',
+      model: 'gemini-3.8-flash',
+      content: '## Kết quả',
+      analyzedAt: '2026-10-27T02:00:00+07:00',
+    }];
+    localStorage.setItem('eqms.session', 'tok.2.abc');
+    fetchMock.mockResolvedValue(jsonResponse(records));
+
+    await expect(api.aiAnalyses()).resolves.toEqual(records);
+    expect(fetchMock).toHaveBeenCalledWith(`${BASE}/api/ai/analyses`, expect.objectContaining({
+      method: 'GET',
+      headers: expect.objectContaining({ Authorization: 'Bearer tok.2.abc' }),
+    }));
+  });
+
+  it('persists an analysis to the authenticated backend', async () => {
+    const input = {
+      mode: 'executive',
+      provider: 'openai' as const,
+      model: 'gpt-4o-mini',
+      content: '# Kết quả phân tích',
+    };
+    const record = { id: 8, ...input, analyzedAt: '2026-10-27T02:00:00+07:00' };
+    localStorage.setItem('eqms.session', 'tok.2.abc');
+    fetchMock.mockResolvedValue(jsonResponse(record, 201));
+
+    await expect(api.saveAiAnalysis(input)).resolves.toEqual(record);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe(`${BASE}/api/ai/analyses`);
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body)).toEqual(input);
+    expect(init.headers.Authorization).toBe('Bearer tok.2.abc');
+  });
+});
+
 describe('api.updateTaskProgress (CR Master Plan ISO)', () => {
   it('gọi PATCH /api/master-plan/tasks/{id}/progress với body { progress }', async () => {
     const payload = { id: 7, progress: 60 };

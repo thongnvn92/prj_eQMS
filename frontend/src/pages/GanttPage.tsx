@@ -1,11 +1,12 @@
 // Màn hình Gantt Chart – tiến độ task Master Plan (Apache ECharts custom series)
-import { useMemo, useState } from 'react';
-import { Card, Empty, Select, Space, Spin, Tag, Typography } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
+import { Card, Empty, Select, Space, Spin, Typography } from 'antd';
 import { useLookups, useMasterPlan } from '../hooks/queries';
 import EChart from '../components/EChart';
 import { PRIORITY, TASK_STATUS, isTaskOverdue, metaOf } from '../components/widgets';
 import { flattenVisibleTree, tasksOfPlan } from '../store/slices/flattenTree';
 import { MAX_WBS_LEVEL } from '../store/slices/ganttGeometry';
+import TaskStatusLegend from '../components/TaskStatusLegend';
 import type { Priority, Task, TaskStatus } from '../mock/types';
 import type { EChartsOption } from 'echarts';
 
@@ -23,29 +24,23 @@ const GANTT_LABEL_GAP = 12;
 /** grid.left = toàn bộ vùng nhãn + gap; margin = grid.left → nhãn căm trải từ mép trái, không đè bar. */
 const GANTT_GRID_LEFT = GANTT_LABEL_WIDTH + GANTT_LABEL_GAP;
 
-/** Legend antd màu theo status domain */
-function StatusLegend() {
-  return (
-    <Space size={8} wrap>
-      {Object.keys(TASK_STATUS).map((k) => (
-        <Tag key={k} color={TASK_STATUS[k].color} style={{ marginInlineEnd: 0 }}>
-          {TASK_STATUS[k].label}
-        </Tag>
-      ))}
-      <Tag color="red" style={{ marginInlineEnd: 0 }}>
-        Viền đỏ = Overdue
-      </Tag>
-    </Space>
-  );
-}
-
-export default function GanttPage() {
+export default function GanttPage({
+  embedded = false,
+  initialPlanId,
+}: {
+  embedded?: boolean;
+  initialPlanId?: number;
+}) {
   const { data, isLoading } = useMasterPlan();
   const { data: lookups } = useLookups();
   const [phaseId, setPhaseId] = useState<number | ''>('');
   const [status, setStatus] = useState<TaskStatus | ''>('');
   const [priority, setPriority] = useState<Priority | ''>('');
-  const [planId, setPlanId] = useState<number | ''>('');
+  const [planId, setPlanId] = useState<number | ''>(initialPlanId ?? '');
+
+  useEffect(() => {
+    if (embedded && initialPlanId != null) setPlanId(initialPlanId);
+  }, [embedded, initialPlanId]);
 
   const nameOf = (id?: number | null) => lookups?.people.find((p) => p.id === id)?.fullName ?? '—';
   const phaseName = (id: number) => data?.phases.find((p) => p.id === id)?.name ?? '—';
@@ -218,21 +213,25 @@ export default function GanttPage() {
 
   return (
     <div className="eqms-page">
-      <Typography.Title level={4} className="eqms-page-title">
-        Gantt Chart – Tiến độ Master Plan (T10/2026 → T12/2027)
-      </Typography.Title>
+      {!embedded && (
+        <Typography.Title level={4} className="eqms-page-title">
+          Gantt Chart – Tiến độ Master Plan (T10/2026 → T12/2027)
+        </Typography.Title>
+      )}
 
       <Card size="small" style={{ marginBottom: 12 }}>
         <Space wrap>
-          <Select
-            allowClear
-            placeholder="Master Plan"
-            style={{ width: 280 }}
-            value={planId === '' ? undefined : planId}
-            onChange={(v) => setPlanId(v ?? '')}
-            options={(data?.plans ?? []).map((p) => ({ value: p.id, label: `${p.name} (${p.cycleLabel})` }))}
-            notFoundContent="Chưa có kế hoạch"
-          />
+          {!embedded && (
+            <Select
+              allowClear
+              placeholder="Master Plan"
+              style={{ width: 280 }}
+              value={planId === '' ? undefined : planId}
+              onChange={(v) => setPlanId(v ?? '')}
+              options={(data?.plans ?? []).map((p) => ({ value: p.id, label: `${p.name} (${p.cycleLabel})` }))}
+              notFoundContent="Chưa có kế hoạch"
+            />
+          )}
           <Select
             allowClear
             placeholder="Giai đoạn"
@@ -262,7 +261,7 @@ export default function GanttPage() {
           </Typography.Text>
         </Space>
         <div style={{ marginTop: 8 }}>
-          <StatusLegend />
+          <TaskStatusLegend />
         </div>
       </Card>
 
@@ -276,4 +275,3 @@ export default function GanttPage() {
     </div>
   );
 }
-

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\ActionsController;
+use App\Http\Controllers\Api\AiAnalysisController;
 use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DashboardController;
@@ -28,6 +29,8 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->group(function () {
     // Thông tin user hiện tại – trả trực tiếp SessionUser (không bọc { user }).
     Route::get('/me', [AuthController::class, 'me']);
+    Route::get('/ai/analyses', [AiAnalysisController::class, 'index']);
+    Route::post('/ai/analyses', [AiAnalysisController::class, 'store']);
 
     Route::get('/lookups', LookupsController::class);
 

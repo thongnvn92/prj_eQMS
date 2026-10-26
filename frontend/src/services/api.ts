@@ -94,6 +94,42 @@ interface AdminUserRow {
 }
 interface AdminRoleRow { code: string; name: string; permissions: string[]; }
 
+export interface AiAnalysisRecord {
+  id: number;
+  mode: string;
+  provider: 'openai' | 'gemini';
+  model: string;
+  content: string;
+  analyzedAt: string;
+}
+
+interface AiAnalysisInput {
+  mode: string;
+  provider: AiAnalysisRecord['provider'];
+  model: string;
+  content: string;
+}
+
+function mockAiAnalysesKey(): string {
+  const match = /^tok\.(\d+)\./.exec(token() ?? '');
+  if (!match) throw new ApiError(401, 'Phiên đăng nhập không hợp lệ hoặc đã hết hạn.');
+  return `eqms.mock.ai-analyses.${match[1]}`;
+}
+
+function readMockAiAnalyses(): AiAnalysisRecord[] {
+  const raw = localStorage.getItem(mockAiAnalysesKey());
+  if (!raw) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) throw new Error('Invalid AI analysis history');
+    return (parsed as AiAnalysisRecord[])
+      .sort((a, b) => Date.parse(b.analyzedAt) - Date.parse(a.analyzedAt))
+      .slice(0, 10);
+  } catch {
+    throw new ApiError(500, 'Không đọc được lịch sử phân tích AI đã lưu trong trình duyệt.');
+  }
+}
+
 export const api = {
   login: (username: string, password: string) =>
     USE_MOCK
@@ -129,6 +165,18 @@ export const api = {
     USE_MOCK ? mockApi.getMasterPlan(token()) : http<{ phases: Phase[]; tasks: Task[] }>('/master-plan'),
 
   dashboard: () => (USE_MOCK ? mockApi.getDashboard(token()) : http<DashboardStats>('/dashboard')),
+
+  aiAnalyses: (): Promise<AiAnalysisRecord[]> =>
+    USE_MOCK ? Promise.resolve(readMockAiAnalyses()) : http<AiAnalysisRecord[]>('/ai/analyses'),
+
+  saveAiAnalysis: (input: AiAnalysisInput): Promise<AiAnalysisRecord> => {
+    if (!USE_MOCK) return http<AiAnalysisRecord>('/ai/analyses', { method: 'POST', body: input });
+    const key = mockAiAnalysesKey();
+    const record: AiAnalysisRecord = { id: Date.now(), ...input, analyzedAt: new Date().toISOString() };
+    const history = [record, ...readMockAiAnalyses()].slice(0, 10);
+    localStorage.setItem(key, JSON.stringify(history));
+    return Promise.resolve(record);
+  },
 
   updateTask: (id: number, patch: { status?: TaskStatus; progress?: number; ownerId?: number | null; ownerName?: string | null; note?: string }) =>
     USE_MOCK
@@ -660,4 +708,3 @@ export interface ImportResult {
   imported: number;
   errors: ImportRowError[];
 }
-

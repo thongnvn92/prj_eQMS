@@ -6,6 +6,7 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   FileTextOutlined,
+  HistoryOutlined,
   OrderedListOutlined,
   RobotOutlined,
   WarningOutlined,
@@ -27,15 +28,23 @@ import type { WeeklyReportModel } from '../components/WeeklyReport';
 import WeeklyReportModal from '../components/WeeklyReportModal';
 import { analyzeWithAi, isAiConfigured, loadAiSettings } from '../services/ai';
 import type { AiSettings } from '../services/ai';
+import { api } from '../services/api';
+import type { AiAnalysisRecord } from '../services/api';
 import { ANALYSIS_MODES, DEFAULT_MODE, composeRagContext } from '../services/rag';
 import type { RagChunk } from '../services/rag';
 import type { Task } from '../mock/types';
 import type { EChartsOption } from 'echarts';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { normalizeAiMarkdown } from '../utils/markdown';
 
 const SOURCE_TAG_COLOR: Record<string, string> = {
   task: 'blue', document: 'geekblue', action: 'purple', log: 'default',
   kpi: 'green', risk: 'red', bottleneck: 'orange', workload: 'cyan', domain: 'gold',
 };
+
+const formatAnalysisDate = (value: string) =>
+  new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value));
 
 export default function DashboardPage() {
   const { data, isLoading } = useDashboard();
@@ -52,8 +61,14 @@ export default function DashboardPage() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResult, setAiResult] = useState<string>('');
   const [aiError, setAiError] = useState<string>('');
+  const [aiSaveError, setAiSaveError] = useState<string>('');
   const [aiMode, setAiMode] = useState<string>(DEFAULT_MODE);
   const [aiSources, setAiSources] = useState<RagChunk[]>([]);
+  const [aiHistoryOpen, setAiHistoryOpen] = useState(false);
+  const [aiHistory, setAiHistory] = useState<AiAnalysisRecord[]>([]);
+  const [aiHistoryLoading, setAiHistoryLoading] = useState(false);
+  const [aiHistoryError, setAiHistoryError] = useState('');
+  const [selectedAiAnalysisId, setSelectedAiAnalysisId] = useState<number>();
   const [weeklyOpen, setWeeklyOpen] = useState(false);
 
   /**
@@ -62,6 +77,7 @@ export default function DashboardPage() {
    */
   const runAi = (modeKey = aiMode) => {
     setAiError('');
+    setAiSaveError('');
     setAiResult('');
     setAiSources([]);
     if (!isAiConfigured(aiSettings)) {
@@ -89,11 +105,43 @@ export default function DashboardPage() {
       modeKey,
     );
     setAiSources(rag.sources);
-    analyzeWithAi(aiSettings, rag.userPrompt, rag.systemPrompt)
-      .then((text) => setAiResult(text))
-      .catch((e: Error) => setAiError(e.message))
-      .finally(() => setAiLoading(false));
+    void (async () => {
+      try {
+        const text = await analyzeWithAi(aiSettings, rag.userPrompt, rag.systemPrompt);
+        setAiResult(text);
+        try {
+          await api.saveAiAnalysis({
+            mode: modeKey,
+            provider: aiSettings.provider,
+            model: aiSettings.model,
+            content: text,
+          });
+        } catch (e) {
+          setAiSaveError(e instanceof Error ? e.message : 'Không lưu được lịch sử phân tích AI.');
+        }
+      } catch (e) {
+        setAiError(e instanceof Error ? e.message : 'Phân tích AI thất bại.');
+      } finally {
+        setAiLoading(false);
+      }
+    })();
   };
+
+  const openAiHistory = () => {
+    setAiHistoryOpen(true);
+    setAiHistoryLoading(true);
+    setAiHistoryError('');
+    setSelectedAiAnalysisId(undefined);
+    api.aiAnalyses()
+      .then((records) => {
+        setAiHistory(records);
+        setSelectedAiAnalysisId(records[0]?.id);
+      })
+      .catch((e: Error) => setAiHistoryError(e.message))
+      .finally(() => setAiHistoryLoading(false));
+  };
+
+  const selectedAiAnalysis = aiHistory.find((record) => record.id === selectedAiAnalysisId);
 
   const weeklyReport = useMemo<WeeklyReportModel | null>(() => {
     if (!data) return null;
@@ -214,6 +262,9 @@ export default function DashboardPage() {
         <Space wrap>
           <Button icon={<FileTextOutlined />} onClick={() => setWeeklyOpen(true)}>
             Báo cáo tuần
+          </Button>
+          <Button icon={<HistoryOutlined />} onClick={openAiHistory}>
+            Lịch sử phân tích AI
           </Button>
           <Button type="primary" icon={<RobotOutlined />} onClick={() => runAi(aiMode)} loading={aiLoading}>
             Phân tích AI
@@ -353,7 +404,7 @@ export default function DashboardPage() {
         title={<span><RobotOutlined /> Phân tích & Thống kê AI (RAG)</span>}
         open={aiOpen}
         onCancel={() => setAiOpen(false)}
-        width={820}
+        width={1000}
         footer={[
           <Button key="close" onClick={() => setAiOpen(false)}>
             Đóng
@@ -380,6 +431,7 @@ export default function DashboardPage() {
         </Space>
 
         {aiError && <Alert type="error" showIcon message={aiError} style={{ marginBottom: 12 }} />}
+        {aiSaveError && <Alert type="warning" showIcon message={`Kết quả đã có nhưng chưa lưu được lịch sử: ${aiSaveError}`} style={{ marginBottom: 12 }} />}
         {aiLoading ? (
           <div style={{ textAlign: 'center', padding: 40 }}>
             <Spin size="large" />
@@ -387,9 +439,9 @@ export default function DashboardPage() {
           </div>
         ) : (
           aiResult && (
-            <Typography.Paragraph style={{ whiteSpace: 'pre-wrap' }}>
-              {aiResult}
-            </Typography.Paragraph>
+            <div className="ai-markdown-view">
+              <ReactMarkdown skipHtml remarkPlugins={[remarkGfm]}>{normalizeAiMarkdown(aiResult)}</ReactMarkdown>
+            </div>
           )
         )}
 
@@ -405,6 +457,49 @@ export default function DashboardPage() {
               ))}
             </div>
           </>
+        )}
+      </Modal>
+
+      <Modal
+        title={<span><HistoryOutlined /> Lịch sử phân tích AI</span>}
+        open={aiHistoryOpen}
+        onCancel={() => setAiHistoryOpen(false)}
+        footer={<Button onClick={() => setAiHistoryOpen(false)}>Đóng</Button>}
+        width={1000}
+      >
+        {aiHistoryError && <Alert type="error" showIcon message={aiHistoryError} style={{ marginBottom: 12 }} />}
+        {aiHistoryLoading ? (
+          <div style={{ textAlign: 'center', padding: 32 }}><Spin /></div>
+        ) : aiHistory.length === 0 ? (
+          !aiHistoryError && <Empty description="Chưa có lịch sử phân tích AI" />
+        ) : (
+          <Space direction="vertical" size={16} style={{ width: '100%' }}>
+            <Space wrap>
+              <Typography.Text strong>Ngày giờ phân tích - Chế độ phân tích:</Typography.Text>
+              <Select
+                aria-label="Chọn lịch sử phân tích AI"
+                value={selectedAiAnalysisId}
+                onChange={setSelectedAiAnalysisId}
+                style={{ width: 320 }}
+                options={aiHistory.map((record) => ({
+                  value: record.id,
+                  label: `${formatAnalysisDate(record.analyzedAt)} - ${ANALYSIS_MODES.find((mode) => mode.key === record.mode)?.label ?? record.mode}`,
+                }))}
+              />
+            </Space>
+            {selectedAiAnalysis && (
+              <>
+                <Typography.Text type="secondary">
+                  {selectedAiAnalysis.provider} · {selectedAiAnalysis.model} · {formatAnalysisDate(selectedAiAnalysis.analyzedAt)}
+                </Typography.Text>
+                <div className="ai-markdown-view ai-markdown-history">
+                  <ReactMarkdown skipHtml remarkPlugins={[remarkGfm]}>
+                    {normalizeAiMarkdown(selectedAiAnalysis.content)}
+                  </ReactMarkdown>
+                </div>
+              </>
+            )}
+          </Space>
         )}
       </Modal>
     </div>

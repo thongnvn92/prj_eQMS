@@ -65,4 +65,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(ActivityLog::class, 'user_id');
     }
+
+    public function aiAnalyses(): HasMany
+    {
+        return $this->hasMany(AiAnalysis::class, 'user_id');
+    }
 }

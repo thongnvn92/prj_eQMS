@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import { Avatar, Dropdown, Layout, Menu, Space, Tag, Typography } from 'antd';
 import {
-  BarChartOutlined,
   CarryOutOutlined,
   DashboardOutlined,
   FileTextOutlined,
@@ -33,7 +32,6 @@ interface NavItem {
 const NAV: NavItem[] = [
   { key: '/', label: 'Dashboard', icon: <DashboardOutlined />, perm: 'dashboard.view' },
   { key: '/master-plan', label: 'Master Plan ISO', icon: <ScheduleOutlined />, perm: 'master_plan.view' },
-  { key: '/gantt', label: 'Gantt tiến độ', icon: <BarChartOutlined />, perm: 'master_plan.view' },
   { key: '/risks', label: 'Rủi ro', icon: <WarningOutlined />, perm: 'risk.view' },
   { key: '/opportunities', label: 'Cơ hội', icon: <RobotOutlined />, perm: 'opportunity.view' },
   { key: '/documents', label: 'Tài liệu (Documents)', icon: <FileTextOutlined />, perm: 'document.view' },
