@@ -1,16 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { App, Button, Card, Checkbox, Form, Input, Modal, Popconfirm, Select, Space, Switch, Table, Tabs, Tag, Typography, Alert } from 'antd';
 import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined, RobotOutlined, SaveOutlined } from '@ant-design/icons';
 import { useAuth } from '../auth/AuthContext';
 import { PERMISSIONS } from '../auth/permissions';
 import {
   AI_PROVIDER_META,
-  analyzeWithAi,
-  isAiConfigured,
-  loadAiSettings,
-  saveAiSettings,
+  DEFAULT_AI_SETTINGS,
 } from '../services/ai';
 import type { AiProvider, AiSettings } from '../services/ai';
+import { api, ApiError } from '../services/api';
 import {
   useCreateRole,
   useCreateDepartment,
@@ -39,7 +37,6 @@ import {
   useUpdateUser,
   useUsers,
 } from '../hooks/queries';
-import { ApiError } from '../services/api';
 import CsvImportPanel, { type CsvImportBatchResult } from '../components/CsvImportPanel';
 import { DOC_TYPE_LABEL } from '../components/widgets';
 import UserCreateModal from '../components/UserCreateModal';
@@ -408,51 +405,72 @@ export default function AdminPage({ section = 'all' }: { section?: AdminSection 
 
   // ---------- Tích hợp AI (Gemini/GPT) – cấu hình key ở trang Quản trị ----------
   const [aiForm] = Form.useForm<AiSettings>();
-  const [aiSaved, setAiSaved] = useState<AiSettings>(() => loadAiSettings());
+  const [aiSaved, setAiSaved] = useState<AiSettings>(DEFAULT_AI_SETTINGS);
+  const [aiSettingsLoading, setAiSettingsLoading] = useState(false);
+  const [aiSettingsError, setAiSettingsError] = useState('');
+  const [aiSaving, setAiSaving] = useState(false);
   const [aiTesting, setAiTesting] = useState(false);
   const [aiTestResult, setAiTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const canManageAi = can('role.manage');
 
-  const saveAi = () => {
-    aiForm
-      .validateFields()
-      .then((v) => {
-        const settings: AiSettings = {
-          provider: v.provider,
-          apiKey: v.apiKey?.trim() ?? '',
-          model: v.model?.trim() || AI_PROVIDER_META[v.provider].defaultModel,
-          enabled: v.enabled,
-        };
-        saveAiSettings(settings);
+  useEffect(() => {
+    if (!canManageAi) return;
+    setAiSettingsLoading(true);
+    api.adminAiSettings()
+      .then((settings) => {
         setAiSaved(settings);
-        setAiTestResult(null);
-        message.success('Đã lưu cấu hình AI.');
+        aiForm.setFieldsValue({ ...settings, apiKey: '' });
       })
-      .catch(() => undefined);
+      .catch((e: Error) => setAiSettingsError(e.message))
+      .finally(() => setAiSettingsLoading(false));
+  }, [aiForm, canManageAi]);
+
+  const saveAi = async () => {
+    let values: AiSettings;
+    try {
+      values = await aiForm.validateFields();
+    } catch {
+      return;
+    }
+
+    setAiSaving(true);
+    try {
+      const apiKey = values.apiKey?.trim();
+      const settings = await api.saveAiSettings({
+        provider: values.provider,
+        ...(apiKey ? { apiKey } : {}),
+        model: values.model?.trim() || AI_PROVIDER_META[values.provider].defaultModel,
+        enabled: values.enabled,
+      });
+      setAiSaved(settings);
+      aiForm.setFieldsValue({ apiKey: '' });
+      setAiTestResult(null);
+      setAiSettingsError('');
+      message.success('Đã lưu cấu hình AI.');
+    } catch (e) {
+      if (e instanceof Error) message.error(e.message);
+    } finally {
+      setAiSaving(false);
+    }
   };
 
-  const testAi = () => {
-    aiForm
-      .validateFields()
-      .then((v) => {
-        const settings: AiSettings = {
-          provider: v.provider,
-          apiKey: v.apiKey?.trim() ?? '',
-          model: v.model?.trim() || AI_PROVIDER_META[v.provider].defaultModel,
-          enabled: true,
-        };
-        if (!isAiConfigured(settings)) {
-          setAiTestResult({ ok: false, msg: 'Cần nhập API key và bật tích hợp.' });
-          return;
-        }
-        setAiTesting(true);
-        setAiTestResult(null);
-        analyzeWithAi(settings, 'Hãy trả lời đúng một câu: "Kết nối AI thành công" để xác nhận.')
-          .then(() => setAiTestResult({ ok: true, msg: 'Kết nối AI thành công.' }))
-          .catch((e: Error) => setAiTestResult({ ok: false, msg: e.message }))
-          .finally(() => setAiTesting(false));
-      })
-      .catch(() => undefined);
+  const testAi = async () => {
+    try {
+      const values = await aiForm.validateFields();
+      setAiTesting(true);
+      setAiTestResult(null);
+      const apiKey = values.apiKey?.trim();
+      await api.testAiSettings({
+        provider: values.provider,
+        ...(apiKey ? { apiKey } : {}),
+        model: values.model?.trim() || AI_PROVIDER_META[values.provider].defaultModel,
+      });
+      setAiTestResult({ ok: true, msg: 'Kết nối AI thành công.' });
+    } catch (e) {
+      setAiTestResult({ ok: false, msg: e instanceof Error ? e.message : 'Kiểm tra kết nối AI thất bại.' });
+    } finally {
+      setAiTesting(false);
+    }
   };
 
 
@@ -982,17 +1000,18 @@ export default function AdminPage({ section = 'all' }: { section?: AdminSection 
                     showIcon
                     style={{ marginBottom: 16 }}
                     message="Phân tích & báo cáo nhanh Dashboard bằng AI"
-                    description="Chọn OpenAI (GPT) hoặc Google Gemini và nhập API key tương ứng. Key được lưu cục bộ trên trình duyệt (demo). Với production, nên proxy qua backend để không lộ key."
+                    description="Chọn OpenAI (GPT) hoặc Google Gemini và nhập API key tương ứng. Cấu hình được lưu trong cơ sở dữ liệu; API key được mã hóa và không hiển thị lại."
                   />
+                  {aiSettingsError && <Alert type="error" showIcon message={aiSettingsError} style={{ marginBottom: 12 }} />}
                   {!canManageAi ? (
                     <Alert type="warning" showIcon message="Bạn cần quyền quản trị vai trò (role.manage) để cấu hình AI." />
                   ) : (
                     <Form
                       form={aiForm}
                       layout="vertical"
-                      initialValues={aiSaved}
+                      initialValues={{ ...aiSaved, apiKey: '' }}
                       preserve={false}
-                      disabled={!canManageAi}
+                      disabled={!canManageAi || aiSettingsLoading}
                     >
                       <Form.Item name="provider" label="Nhà cung cấp" rules={[{ required: true }]}>
                         <Select
@@ -1000,14 +1019,33 @@ export default function AdminPage({ section = 'all' }: { section?: AdminSection 
                             value: p,
                             label: AI_PROVIDER_META[p].label,
                           }))}
-                          onChange={() => aiForm.setFieldsValue({ model: '' })}
+                          onChange={() => aiForm.setFieldsValue({ model: '', apiKey: '' })}
                         />
                       </Form.Item>
                       <Form.Item name="model" label="Model" extra="Để trống sẽ dùng model mặc định của nhà cung cấp.">
                         <Input placeholder={AI_PROVIDER_META[aiSaved.provider]?.defaultModel ?? 'VD: gpt-4o-mini'} />
                       </Form.Item>
-                      <Form.Item name="apiKey" label="API Key" rules={[{ required: true, message: 'Bắt buộc nhập API key' }]}>
-                        <Input.Password placeholder="Dán API key..." autoComplete="new-password" />
+                      <Form.Item
+                        name="apiKey"
+                        label="API Key"
+                        dependencies={['provider']}
+                        rules={[{
+                          validator: (_, value: string | undefined) => {
+                            const provider = aiForm.getFieldValue('provider') as AiProvider;
+                            const enabled = aiForm.getFieldValue('enabled') as boolean;
+                            if (value?.trim() || !enabled || (aiSaved.apiKeyConfigured && provider === aiSaved.provider)) {
+                              return Promise.resolve();
+                            }
+                            return Promise.reject(new Error('Bắt buộc nhập API key.'));
+                          },
+                        }]}
+                      >
+                        <Input.Password
+                          placeholder={aiSaved.apiKeyConfigured && aiForm.getFieldValue('provider') === aiSaved.provider
+                            ? '******'
+                            : 'Dán API key...'}
+                          autoComplete="new-password"
+                        />
                       </Form.Item>
                       <Form.Item name="enabled" label="Bật tích hợp" valuePropName="checked">
                         <Switch checkedChildren="Bật" unCheckedChildren="Tắt" />
@@ -1021,7 +1059,7 @@ export default function AdminPage({ section = 'all' }: { section?: AdminSection 
                         />
                       )}
                       <Space>
-                        <Button type="primary" icon={<SaveOutlined />} onClick={saveAi}>
+                        <Button type="primary" icon={<SaveOutlined />} onClick={saveAi} loading={aiSettingsLoading || aiSaving}>
                           Lưu cấu hình
                         </Button>
                         <Button icon={<RobotOutlined />} loading={aiTesting} onClick={testAi}>

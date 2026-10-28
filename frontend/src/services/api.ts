@@ -5,6 +5,7 @@
 //                             với header Authorization: Bearer <token>.
 // KHÔNG fallback âm thầm sang mock khi API thật lỗi – lỗi ném ApiError cho UI xử lý.
 import { mockApi, ApiError } from '../mock/api';
+import type { AiProvider, AiSettings } from './ai';
 import type {
   ActionItem, DashboardStats, Department, DocAction,
   DocumentFile, DocumentItem, DocumentStatusItem, MasterPlan, OpportunityItem, OpportunityLevel, Phase,
@@ -110,6 +111,26 @@ interface AiAnalysisInput {
   content: string;
 }
 
+interface AiSettingsInput {
+  provider: AiProvider;
+  apiKey?: string;
+  model: string;
+  enabled: boolean;
+}
+
+interface AiAnalysisRequest {
+  mode: string;
+  prompt: string;
+  systemPrompt?: string;
+}
+
+interface AiAnalysisResult {
+  mode: string;
+  provider: AiProvider;
+  model: string;
+  content: string;
+}
+
 function mockAiAnalysesKey(): string {
   const match = /^tok\.(\d+)\./.exec(token() ?? '');
   if (!match) throw new ApiError(401, 'Phiên đăng nhập không hợp lệ hoặc đã hết hạn.');
@@ -165,6 +186,19 @@ export const api = {
     USE_MOCK ? mockApi.getMasterPlan(token()) : http<{ phases: Phase[]; tasks: Task[] }>('/master-plan'),
 
   dashboard: () => (USE_MOCK ? mockApi.getDashboard(token()) : http<DashboardStats>('/dashboard')),
+
+  aiSettings: (): Promise<AiSettings> => http<AiSettings>('/ai/settings'),
+
+  adminAiSettings: (): Promise<AiSettings> => http<AiSettings>('/admin/settings/ai'),
+
+  saveAiSettings: (input: AiSettingsInput): Promise<AiSettings> =>
+    http<AiSettings>('/admin/settings/ai', { method: 'PUT', body: input }),
+
+  testAiSettings: (input: Omit<AiSettingsInput, 'enabled'>): Promise<{ message: string }> =>
+    http<{ message: string }>('/admin/settings/ai/test', { method: 'POST', body: input }),
+
+  analyzeAi: (input: AiAnalysisRequest): Promise<AiAnalysisResult> =>
+    http<AiAnalysisResult>('/ai/analyze', { method: 'POST', body: input }),
 
   aiAnalyses: (): Promise<AiAnalysisRecord[]> =>
     USE_MOCK ? Promise.resolve(readMockAiAnalyses()) : http<AiAnalysisRecord[]>('/ai/analyses'),

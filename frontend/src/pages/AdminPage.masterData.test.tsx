@@ -5,7 +5,12 @@ import { App as AntdApp } from 'antd';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPage from './AdminPage';
 
-const authState = vi.hoisted(() => ({ perms: [] as string[] }));
+const authState = vi.hoisted(() => ({
+  perms: [] as string[],
+  aiSettings: vi.fn(),
+  adminAiSettings: vi.fn(),
+  saveAiSettings: vi.fn(),
+}));
 vi.mock('../auth/AuthContext', () => ({
   useAuth: () => ({
     user: { id: 1, username: 'admin', fullName: 'Admin', roleCodes: ['super_admin'] },
@@ -16,12 +21,31 @@ vi.mock('../auth/AuthContext', () => ({
 }));
 
 vi.mock('../services/ai', () => ({
-  AI_PROVIDER_META: { openai: { label: 'OpenAI', defaultModel: 'gpt-4o-mini', docs: 'https://example.com' } },
-  loadAiSettings: () => ({ provider: 'openai', apiKey: '', model: 'gpt-4o-mini', enabled: false }),
-  saveAiSettings: vi.fn(),
-  analyzeWithAi: vi.fn(async () => 'ok'),
-  isAiConfigured: () => true,
+  AI_PROVIDER_META: {
+    openai: { label: 'OpenAI', defaultModel: 'gpt-4o-mini', docs: 'https://example.com' },
+    gemini: { label: 'Gemini', defaultModel: 'gemini-3.8-flash', docs: 'https://example.com' },
+  },
+  DEFAULT_AI_SETTINGS: {
+    provider: 'gemini',
+    apiKey: '',
+    apiKeyConfigured: false,
+    model: 'gemini-3.8-flash',
+    enabled: false,
+  },
 }));
+
+vi.mock('../services/api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../services/api')>();
+  return {
+    ...actual,
+    api: {
+      ...actual.api,
+      aiSettings: authState.aiSettings,
+      adminAiSettings: authState.adminAiSettings,
+      saveAiSettings: authState.saveAiSettings,
+    },
+  };
+});
 
 import lookupsReducer from '../store/slices/lookupsSlice';
 import dashboardReducer from '../store/slices/dashboardSlice';
@@ -87,6 +111,27 @@ function renderPage(section: 'all' | 'users' | 'functions' | 'settings' = 'all',
 }
 
 beforeEach(() => {
+  authState.aiSettings.mockResolvedValue({
+    provider: 'gemini',
+    apiKey: '',
+    apiKeyConfigured: false,
+    model: 'gemini-3.8-flash',
+    enabled: false,
+  });
+  authState.adminAiSettings.mockResolvedValue({
+    provider: 'gemini',
+    apiKey: '',
+    apiKeyConfigured: false,
+    model: 'gemini-3.8-flash',
+    enabled: false,
+  });
+  authState.saveAiSettings.mockResolvedValue({
+    provider: 'gemini',
+    apiKey: '',
+    apiKeyConfigured: false,
+    model: 'gemini-3.8-flash',
+    enabled: false,
+  });
   authState.perms = [
     'user.create', 'user.update', 'user.view',
     'role.manage',
@@ -111,6 +156,33 @@ describe('AdminPage master-data management', () => {
     expect(screen.getByRole('tab', { name: /Quản lý master data/i })).toHaveAttribute('aria-selected', 'true');
     expect(screen.queryByRole('tab', { name: /Người dùng/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('tab', { name: /Tích hợp AI/i })).not.toBeInTheDocument();
+  });
+
+  describe('AdminPage AI settings', () => {
+    it('loads masked credentials and saves configuration without sending back the secret', async () => {
+      const savedSettings = {
+        provider: 'openai' as const,
+        apiKey: '******',
+        apiKeyConfigured: true,
+        model: 'gpt-4o-mini',
+        enabled: true,
+      };
+      authState.adminAiSettings.mockResolvedValue(savedSettings);
+      authState.saveAiSettings.mockResolvedValue(savedSettings);
+
+      renderPage('settings');
+
+      const keyInput = await screen.findByPlaceholderText('******');
+      expect(keyInput).toHaveValue('');
+      fireEvent.click(screen.getByRole('button', { name: /Lưu cấu hình/ }));
+
+      await waitFor(() => expect(authState.saveAiSettings).toHaveBeenCalledWith({
+        provider: 'openai',
+        model: 'gpt-4o-mini',
+        enabled: true,
+      }));
+      expect(localStorage.getItem('eqms.ai.settings')).toBeNull();
+    });
   });
 
   it('shows the user and role tabs for the user submenu', () => {

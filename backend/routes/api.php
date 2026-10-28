@@ -1,8 +1,9 @@
 <?php
 
 use App\Http\Controllers\Api\ActionsController;
-use App\Http\Controllers\Api\AiAnalysisController;
 use App\Http\Controllers\Api\AdminController;
+use App\Http\Controllers\Api\AiAnalysisController;
+use App\Http\Controllers\Api\AiSettingsController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DocumentsController;
@@ -31,6 +32,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::get('/ai/analyses', [AiAnalysisController::class, 'index']);
     Route::post('/ai/analyses', [AiAnalysisController::class, 'store']);
+    Route::get('/ai/settings', [AiSettingsController::class, 'show'])
+        ->middleware('permission:dashboard.view');
+    Route::post('/ai/analyze', [AiSettingsController::class, 'analyze'])
+        ->middleware('permission:dashboard.view');
+    Route::get('/admin/settings/ai', [AiSettingsController::class, 'show'])
+        ->middleware('permission:role.manage');
+    Route::put('/admin/settings/ai', [AiSettingsController::class, 'update'])
+        ->middleware('permission:role.manage');
+    Route::post('/admin/settings/ai/test', [AiSettingsController::class, 'test'])
+        ->middleware('permission:role.manage');
 
     Route::get('/lookups', LookupsController::class);
 

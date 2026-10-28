@@ -117,6 +117,68 @@ describe('api.aiAnalyses', () => {
   });
 });
 
+describe('api AI settings and analysis', () => {
+  beforeEach(() => {
+    localStorage.setItem('eqms.session', 'tok.2.abc');
+  });
+
+  it('loads masked AI settings from the backend', async () => {
+    const settings = {
+      provider: 'gemini',
+      apiKey: '******',
+      apiKeyConfigured: true,
+      model: 'gemini-3.8-flash',
+      enabled: true,
+    };
+    fetchMock.mockResolvedValue(jsonResponse(settings));
+
+    await expect(api.aiSettings()).resolves.toEqual(settings);
+    expect(fetchMock).toHaveBeenCalledWith(`${BASE}/api/ai/settings`, expect.objectContaining({
+      method: 'GET',
+    }));
+  });
+
+  it('persists AI settings without requiring the masked secret to be sent back', async () => {
+    const input = {
+      provider: 'gemini' as const,
+      model: 'gemini-3.8-flash',
+      enabled: true,
+    };
+    const settings = { ...input, apiKey: '******', apiKeyConfigured: true };
+    fetchMock.mockResolvedValue(jsonResponse(settings));
+
+    await expect(api.saveAiSettings(input)).resolves.toEqual(settings);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe(`${BASE}/api/admin/settings/ai`);
+    expect(init.method).toBe('PUT');
+    expect(JSON.parse(init.body)).toEqual(input);
+  });
+
+  it('sends Dashboard prompts to the backend without provider credentials', async () => {
+    const result = {
+      mode: 'executive',
+      provider: 'gemini',
+      model: 'gemini-3.8-flash',
+      content: 'Analysis',
+    };
+    fetchMock.mockResolvedValue(jsonResponse(result));
+
+    await expect(api.analyzeAi({
+      mode: 'executive',
+      prompt: 'Dashboard facts',
+      systemPrompt: 'Analyze facts',
+    })).resolves.toEqual(result);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe(`${BASE}/api/ai/analyze`);
+    expect(JSON.parse(init.body)).toEqual({
+      mode: 'executive',
+      prompt: 'Dashboard facts',
+      systemPrompt: 'Analyze facts',
+    });
+    expect(init.body).not.toContain('apiKey');
+  });
+});
+
 describe('api.updateTaskProgress (CR Master Plan ISO)', () => {
   it('gọi PATCH /api/master-plan/tasks/{id}/progress với body { progress }', async () => {
     const payload = { id: 7, progress: 60 };

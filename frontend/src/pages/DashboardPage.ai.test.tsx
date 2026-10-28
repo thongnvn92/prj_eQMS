@@ -4,7 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DashboardPage from './DashboardPage';
 
 const mocks = vi.hoisted(() => ({
-  analyzeWithAi: vi.fn(),
+  analyzeAi: vi.fn(),
+  aiSettings: vi.fn(),
   saveAiAnalysis: vi.fn(),
   aiAnalyses: vi.fn(),
 }));
@@ -42,18 +43,20 @@ vi.mock('../hooks/queries', () => ({
 }));
 
 vi.mock('../services/ai', () => ({
-  analyzeWithAi: mocks.analyzeWithAi,
-  isAiConfigured: () => true,
-  loadAiSettings: () => ({
+  DEFAULT_AI_SETTINGS: {
     provider: 'gemini',
-    apiKey: 'test-key',
+    apiKey: '',
+    apiKeyConfigured: false,
     model: 'gemini-3.8-flash',
-    enabled: true,
-  }),
+    enabled: false,
+  },
+  isAiConfigured: () => true,
 }));
 
 vi.mock('../services/api', () => ({
   api: {
+    aiSettings: mocks.aiSettings,
+    analyzeAi: mocks.analyzeAi,
     saveAiAnalysis: mocks.saveAiAnalysis,
     aiAnalyses: mocks.aiAnalyses,
   },
@@ -76,7 +79,19 @@ vi.mock('../components/WeeklyReportModal', () => ({ default: () => null }));
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.analyzeWithAi.mockResolvedValue('## Kết quả AI\n\n- Tiến độ **25%**.');
+  mocks.aiSettings.mockResolvedValue({
+    provider: 'gemini',
+    apiKey: '******',
+    apiKeyConfigured: true,
+    model: 'gemini-3.8-flash',
+    enabled: true,
+  });
+  mocks.analyzeAi.mockResolvedValue({
+    mode: 'executive',
+    provider: 'gemini',
+    model: 'gemini-3.8-flash',
+    content: '## Kết quả AI\n\n- Tiến độ **25%**.',
+  });
   mocks.saveAiAnalysis.mockResolvedValue({ id: 10 });
   mocks.aiAnalyses.mockResolvedValue([
     {
@@ -102,6 +117,7 @@ describe('DashboardPage AI analysis', () => {
   it('saves AI output and renders its markdown formatting', async () => {
     render(<DashboardPage />);
 
+    await waitFor(() => expect(screen.getByRole('button', { name: /Phân tích AI/ })).not.toBeDisabled());
     fireEvent.click(screen.getByRole('button', { name: /Phân tích AI/ }));
 
     expect(await screen.findByRole('heading', { level: 2, name: 'Kết quả AI' })).toBeInTheDocument();
@@ -112,6 +128,11 @@ describe('DashboardPage AI analysis', () => {
       model: 'gemini-3.8-flash',
       content: '## Kết quả AI\n\n- Tiến độ **25%**.',
     }));
+    expect(mocks.analyzeAi).toHaveBeenCalledWith({
+      mode: 'executive',
+      prompt: 'Analyze dashboard',
+      systemPrompt: 'System prompt',
+    });
   });
 
   it('loads the latest history and exposes older entries in the selector', async () => {
@@ -132,10 +153,16 @@ describe('DashboardPage AI analysis', () => {
 
   it('renders compact plaintext Markdown tables in analysis results', async () => {
     const tableMarkdown = '| Mức ưu tiên | Hạng mục | | :--- | :--- | | **CAO** | **[ACT-001]** quá hạn |';
-    mocks.analyzeWithAi.mockResolvedValue(tableMarkdown);
+    mocks.analyzeAi.mockResolvedValue({
+      mode: 'executive',
+      provider: 'gemini',
+      model: 'gemini-3.8-flash',
+      content: tableMarkdown,
+    });
 
     render(<DashboardPage />);
 
+    await waitFor(() => expect(screen.getByRole('button', { name: /Phân tích AI/ })).not.toBeDisabled());
     fireEvent.click(screen.getByRole('button', { name: /Phân tích AI/ }));
     const resultTable = await screen.findByRole('table');
     expect(within(resultTable).getByRole('columnheader', { name: 'Mức ưu tiên' })).toBeInTheDocument();

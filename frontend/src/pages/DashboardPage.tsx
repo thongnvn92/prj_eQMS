@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Button, Card, Col, Divider, Empty, Modal, Row, Select, Space, Spin, Table, Tag, Typography, Alert,
 } from 'antd';
@@ -26,7 +26,7 @@ import {
 import { buildWeeklyReport } from '../components/WeeklyReport';
 import type { WeeklyReportModel } from '../components/WeeklyReport';
 import WeeklyReportModal from '../components/WeeklyReportModal';
-import { analyzeWithAi, isAiConfigured, loadAiSettings } from '../services/ai';
+import { DEFAULT_AI_SETTINGS, isAiConfigured } from '../services/ai';
 import type { AiSettings } from '../services/ai';
 import { api } from '../services/api';
 import type { AiAnalysisRecord } from '../services/api';
@@ -56,7 +56,9 @@ export default function DashboardPage() {
 
   // ---------- AI Insight (RAG) + Weekly Report state ----------
   const { data: actions } = useActionItems();
-  const [aiSettings, setAiSettings] = useState<AiSettings>(() => loadAiSettings());
+  const [aiSettings, setAiSettings] = useState<AiSettings>(DEFAULT_AI_SETTINGS);
+  const [aiSettingsLoading, setAiSettingsLoading] = useState(true);
+  const [aiSettingsError, setAiSettingsError] = useState('');
   const [aiOpen, setAiOpen] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResult, setAiResult] = useState<string>('');
@@ -71,6 +73,13 @@ export default function DashboardPage() {
   const [selectedAiAnalysisId, setSelectedAiAnalysisId] = useState<number>();
   const [weeklyOpen, setWeeklyOpen] = useState(false);
 
+  useEffect(() => {
+    api.aiSettings()
+      .then(setAiSettings)
+      .catch((e: Error) => setAiSettingsError(e.message))
+      .finally(() => setAiSettingsLoading(false));
+  }, []);
+
   /**
    * RAG: dựng knowledge base từ toàn bộ dữ liệu eQMS → retrieve chunk liên quan
    * theo mode → ghép prompt chuyên gia ISO. Thay cho prompt "nhồi" toàn bộ dữ liệu.
@@ -80,6 +89,16 @@ export default function DashboardPage() {
     setAiSaveError('');
     setAiResult('');
     setAiSources([]);
+    if (aiSettingsLoading) {
+      setAiError('Đang tải cấu hình AI. Vui lòng thử lại sau.');
+      setAiOpen(true);
+      return;
+    }
+    if (aiSettingsError) {
+      setAiError(`Không tải được cấu hình AI: ${aiSettingsError}`);
+      setAiOpen(true);
+      return;
+    }
     if (!isAiConfigured(aiSettings)) {
       setAiError('Chưa cấu hình AI. Vào trang Quản trị → tab "Tích hợp AI" để nhập API key.');
       setAiOpen(true);
@@ -107,14 +126,18 @@ export default function DashboardPage() {
     setAiSources(rag.sources);
     void (async () => {
       try {
-        const text = await analyzeWithAi(aiSettings, rag.userPrompt, rag.systemPrompt);
-        setAiResult(text);
+        const analysis = await api.analyzeAi({
+          mode: modeKey,
+          prompt: rag.userPrompt,
+          systemPrompt: rag.systemPrompt,
+        });
+        setAiResult(analysis.content);
         try {
           await api.saveAiAnalysis({
             mode: modeKey,
-            provider: aiSettings.provider,
-            model: aiSettings.model,
-            content: text,
+            provider: analysis.provider,
+            model: analysis.model,
+            content: analysis.content,
           });
         } catch (e) {
           setAiSaveError(e instanceof Error ? e.message : 'Không lưu được lịch sử phân tích AI.');
@@ -266,7 +289,7 @@ export default function DashboardPage() {
           <Button icon={<HistoryOutlined />} onClick={openAiHistory}>
             Lịch sử phân tích AI
           </Button>
-          <Button type="primary" icon={<RobotOutlined />} onClick={() => runAi(aiMode)} loading={aiLoading}>
+          <Button type="primary" icon={<RobotOutlined />} onClick={() => runAi(aiMode)} loading={aiLoading} disabled={aiSettingsLoading}>
             Phân tích AI
           </Button>
         </Space>
@@ -409,7 +432,7 @@ export default function DashboardPage() {
           <Button key="close" onClick={() => setAiOpen(false)}>
             Đóng
           </Button>,
-          <Button key="retry" type="primary" icon={<RobotOutlined />} onClick={() => runAi(aiMode)} loading={aiLoading}>
+          <Button key="retry" type="primary" icon={<RobotOutlined />} onClick={() => runAi(aiMode)} loading={aiLoading} disabled={aiSettingsLoading}>
             Phân tích lại
           </Button>,
         ]}
