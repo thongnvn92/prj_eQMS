@@ -89,6 +89,13 @@ class AiProviderService
     private function ensureSuccessful(Response $response, string $provider): void
     {
         if (! $response->successful()) {
+            if ($response->status() === 503) {
+                throw new RuntimeException(
+                    "{$provider} đang tạm thời quá tải hoặc không khả dụng (HTTP 503). "
+                    .'Hệ thống đã thử lại; vui lòng đợi một lúc rồi kiểm tra lại kết nối.',
+                );
+            }
+
             throw new RuntimeException("{$provider} trả về lỗi HTTP {$response->status()}.");
         }
     }

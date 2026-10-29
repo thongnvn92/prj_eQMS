@@ -173,6 +173,32 @@ class AiSettingsTest extends TestCase
         );
     }
 
+    public function test_gemini_connection_check_reports_service_unavailable_after_retries(): void
+    {
+        $admin = $this->createUserWithPermission('gemini-admin', 'role.manage');
+        Http::fake([
+            'generativelanguage.googleapis.com/*' => Http::sequence()
+                ->push(['error' => ['message' => 'Service unavailable']], 503)
+                ->push(['error' => ['message' => 'Service unavailable']], 503)
+                ->push(['error' => ['message' => 'Service unavailable']], 503)
+                ->push(['error' => ['message' => 'Service unavailable']], 503),
+        ]);
+
+        $this->actingAs($admin, 'sanctum')
+            ->postJson('/api/admin/settings/ai/test', [
+                'provider' => 'gemini',
+                'apiKey' => 'test-gemini-key',
+                'model' => 'gemini-3.8-flash',
+            ])
+            ->assertStatus(502)
+            ->assertJsonPath(
+                'message',
+                'Gemini đang tạm thời quá tải hoặc không khả dụng (HTTP 503). Hệ thống đã thử lại; vui lòng đợi một lúc rồi kiểm tra lại kết nối.',
+            );
+
+        Http::assertSentCount(4);
+    }
+
     public function test_settings_api_requires_role_manage_permission(): void
     {
         $user = User::create([
