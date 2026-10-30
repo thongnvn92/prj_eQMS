@@ -6,10 +6,13 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\AiProviderService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as ClientRequest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Mockery\MockInterface;
 use Tests\TestCase;
 
 class AiSettingsTest extends TestCase
@@ -173,7 +176,7 @@ class AiSettingsTest extends TestCase
         );
     }
 
-    public function test_gemini_connection_check_reports_service_unavailable_after_retries(): void
+    public function test_gemini_connection_check_returns_service_unavailable_without_exceeding_gateway_timeout(): void
     {
         $admin = $this->createUserWithPermission('gemini-admin', 'role.manage');
         Http::fake([
@@ -193,10 +196,42 @@ class AiSettingsTest extends TestCase
             ->assertStatus(502)
             ->assertJsonPath(
                 'message',
-                'Gemini đang tạm thời quá tải hoặc không khả dụng (HTTP 503). Hệ thống đã thử lại; vui lòng đợi một lúc rồi kiểm tra lại kết nối.',
+                'Gemini đang tạm thời quá tải hoặc không khả dụng (HTTP 503). Vui lòng đợi một lúc rồi kiểm tra lại kết nối.',
             );
 
-        Http::assertSentCount(4);
+        Http::assertSentCount(1);
+    }
+
+    public function test_connection_check_uses_timeout_and_attempts_from_configuration(): void
+    {
+        $admin = $this->createUserWithPermission('gemini-admin', 'role.manage');
+        config([
+            'services.ai_settings.timeout' => 9,
+            'services.ai_settings.max_attempts' => 2,
+        ]);
+        $this->mock(AiProviderService::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('analyze')
+                ->once()
+                ->with(
+                    'gemini',
+                    'gemini-3.8-flash',
+                    'test-gemini-key',
+                    'Hãy trả lời đúng một câu: "Kết nối AI thành công" để xác nhận.',
+                    '',
+                    9,
+                    2,
+                )
+                ->andReturn('Kết nối AI thành công');
+        });
+
+        $this->actingAs($admin, 'sanctum')
+            ->postJson('/api/admin/settings/ai/test', [
+                'provider' => 'gemini',
+                'apiKey' => 'test-gemini-key',
+                'model' => 'gemini-3.8-flash',
+            ])
+            ->assertOk()
+            ->assertJsonPath('message', 'Kết nối AI thành công.');
     }
 
     public function test_settings_api_requires_role_manage_permission(): void
@@ -212,5 +247,32 @@ class AiSettingsTest extends TestCase
         $this->actingAs($user, 'sanctum')
             ->getJson('/api/admin/settings/ai')
             ->assertForbidden();
+    }
+
+    public function test_settings_read_failure_is_logged_and_returns_cors_enabled_json_error(): void
+    {
+        $admin = $this->createUserWithPermission('ai-admin', 'role.manage');
+        Setting::query()->create([
+            'key' => 'ai',
+            'value' => [
+                'provider' => 'openai',
+                'model' => 'gpt-4o-mini',
+                'enabled' => false,
+                'apiKey' => '',
+            ],
+        ]);
+        DB::table('settings')->where('key', 'ai')->update(['value' => 'invalid-encrypted-data']);
+        config(['cors.allowed_origins' => ['https://qms.nao.cloud']]);
+        Log::shouldReceive('error')
+            ->once()
+            ->withArgs(fn (string $message, array $context): bool => $message === 'Unable to load AI settings.'
+                && isset($context['exception']));
+
+        $this->actingAs($admin, 'sanctum')
+            ->withHeaders(['Origin' => 'https://qms.nao.cloud'])
+            ->getJson('/api/admin/settings/ai')
+            ->assertStatus(500)
+            ->assertJsonPath('message', 'Không thể tải cấu hình AI lúc này. Vui lòng liên hệ quản trị viên.')
+            ->assertHeader('Access-Control-Allow-Origin', 'https://qms.nao.cloud');
     }
 }

@@ -31,4 +31,9 @@ return [
         ],
     ],
 
+    'ai_settings' => [
+        'timeout' => env('API_SETTING_TIMEOUT', 60),
+        'max_attempts' => env('API_SETTING_MAX_ATTEMPTS', 4),
+    ],
+
 ];

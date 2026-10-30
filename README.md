@@ -39,6 +39,8 @@ php artisan serve                # http://127.0.0.1:8000  (API prefix /api)
 Cách khác với **Laragon**: tạo VirtualHost trỏ vào `backend/public/` (ví dụ `eqms.test` với port 8000) – FE đổi `VITE_API_URL` cho khớp.
 
 - Env backend: `backend/.env` (mẫu tại `.env.example` – MySQL `eqms`, timezone `Asia/Ho_Chi_Minh`, `FRONTEND_URL=http://localhost:5173` cho CORS). Không commit `.env` thật.
+- Khi deploy, đặt `APP_URL=https://api.qms.nao.cloud` và `FRONTEND_URL=https://qms.nao.cloud`. `FRONTEND_URL` phải khớp chính xác origin trên thanh địa chỉ trình duyệt (scheme + host + port nếu có), không phải URL API và không thêm path/dấu `/` cuối. Sau khi đổi env, chạy trong thư mục `backend`: `php artisan optimize:clear` rồi `php artisan config:cache`; nếu chạy PHP-FPM, khởi động lại worker/service để nạp cấu hình mới.
+- Nếu vẫn thiếu `Access-Control-Allow-Origin`, kiểm tra request `OPTIONS` và response thực tế trong Network tab; proxy/CDN cần chuyển tiếp `OPTIONS` tới Laravel và không được chặn/trả lỗi trước middleware CORS.
 - Test BE: `php artisan test` (cần database test được cấu hình an toàn; AI history feature test chưa xác minh trong môi trường thiếu `pdo_sqlite`).
 
 ### 2. Frontend (React + Vite) – `http://localhost:5173`

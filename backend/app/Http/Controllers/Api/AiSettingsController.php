@@ -5,15 +5,29 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Services\AiProviderService;
 use App\Services\AiSettingsService;
+use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 class AiSettingsController extends Controller
 {
     public function show(AiSettingsService $settings): JsonResponse
     {
-        return response()->json($settings->response());
+        try {
+            return response()->json($settings->response());
+        } catch (QueryException|DecryptException $exception) {
+            Log::error('Unable to load AI settings.', [
+                'exception' => $exception,
+                'path' => request()->path(),
+            ]);
+
+            return response()->json([
+                'message' => 'Không thể tải cấu hình AI lúc này. Vui lòng liên hệ quản trị viên.',
+            ], 500);
+        }
     }
 
     public function update(Request $request, AiSettingsService $settings): JsonResponse
@@ -61,7 +75,14 @@ class AiSettingsController extends Controller
             ], 422);
         }
 
-        return $this->analyzeResponse($provider, $validated['provider'], $validated['model'], $apiKey);
+        return $this->analyzeResponse(
+            $provider,
+            $validated['provider'],
+            $validated['model'],
+            $apiKey,
+            timeout: max(1, (int) config('services.ai_settings.timeout', 15)),
+            maxAttempts: max(1, (int) config('services.ai_settings.max_attempts', 1)),
+        );
     }
 
     public function analyze(Request $request, AiSettingsService $settings, AiProviderService $provider): JsonResponse
@@ -106,6 +127,8 @@ class AiSettingsController extends Controller
         string $providerName,
         string $model,
         string $apiKey,
+        int $timeout = 60,
+        int $maxAttempts = 4,
     ): JsonResponse {
         try {
             $provider->analyze(
@@ -114,6 +137,8 @@ class AiSettingsController extends Controller
                 $apiKey,
                 'Hãy trả lời đúng một câu: "Kết nối AI thành công" để xác nhận.',
                 '',
+                $timeout,
+                $maxAttempts,
             );
         } catch (RuntimeException $exception) {
             return response()->json(['message' => $exception->getMessage()], 502);
