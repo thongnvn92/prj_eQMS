@@ -154,6 +154,23 @@ describe('api AI settings and analysis', () => {
     expect(JSON.parse(init.body)).toEqual(input);
   });
 
+  it('tests AI connectivity with POST and sends the provider settings in the body', async () => {
+    const input = {
+      provider: 'gemini' as const,
+      apiKey: 'test-key',
+      model: 'gemini-3.8-flash',
+    };
+    fetchMock.mockResolvedValue(jsonResponse({ message: 'Kết nối AI thành công.' }));
+
+    await expect(api.testAiSettings(input)).resolves.toEqual({
+      message: 'Kết nối AI thành công.',
+    });
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe(`${BASE}/api/admin/settings/ai/test`);
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body)).toEqual(input);
+  });
+
   it('sends Dashboard prompts to the backend without provider credentials', async () => {
     const result = {
       mode: 'executive',
