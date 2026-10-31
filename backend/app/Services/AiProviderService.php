@@ -15,11 +15,11 @@ class AiProviderService
         string $apiKey,
         string $prompt,
         string $systemPrompt,
-        int $timeout = 60,
+        int $timeout = 600,
         int $maxAttempts = 4,
     ): string {
         if ($provider === 'openai') {
-            $response = $this->sendWithRetry(fn () => Http::timeout($timeout)
+            $response = $this->sendWithRetry(fn() => Http::timeout($timeout)
                 ->withToken($apiKey)
                 ->post('https://api.openai.com/v1/chat/completions', [
                     'model' => $model,
@@ -40,10 +40,10 @@ class AiProviderService
             return $content;
         }
 
-        $response = $this->sendWithRetry(fn () => Http::timeout($timeout)
+        $response = $this->sendWithRetry(fn() => Http::timeout($timeout)
             ->withHeaders(['x-goog-api-key' => $apiKey])
             ->post(
-                'https://generativelanguage.googleapis.com/v1beta/models/'.rawurlencode($model).':generateContent',
+                'https://generativelanguage.googleapis.com/v1beta/models/' . rawurlencode($model) . ':generateContent',
                 [
                     'systemInstruction' => ['parts' => [['text' => $systemPrompt]]],
                     'contents' => [['role' => 'user', 'parts' => [['text' => $prompt]]]],
@@ -94,7 +94,7 @@ class AiProviderService
             if ($response->status() === 503) {
                 throw new RuntimeException(
                     "{$provider} đang tạm thời quá tải hoặc không khả dụng (HTTP 503). "
-                    .'Vui lòng đợi một lúc rồi kiểm tra lại kết nối.',
+                        . 'Vui lòng đợi một lúc rồi kiểm tra lại kết nối.',
                 );
             }
 
