@@ -15,7 +15,7 @@ class AiProviderService
         string $apiKey,
         string $prompt,
         string $systemPrompt,
-        int $timeout = 600,
+        int $timeout = 3600,
         int $maxAttempts = 4,
     ): string {
         if ($provider === 'openai') {
